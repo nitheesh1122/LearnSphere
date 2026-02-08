@@ -1,6 +1,4 @@
 # LearnSphere
-
-**Owner**: Nitheesh
 **Repository**: [LearnSphere on GitHub](https://github.com/nitheesh1122/LearnSphere)
 
 ## 🚀 Project Overview
