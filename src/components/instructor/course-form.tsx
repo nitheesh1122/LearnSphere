@@ -36,8 +36,12 @@ interface CourseFormProps {
         price: number | null;
         accessType: string;
         published: boolean;
+        level?: string;
+        visibility?: string;
         imageUrl?: string | null;
         previewVideoUrl?: string | null;
+        tags?: string;
+        website?: string | null;
     };
 }
 
@@ -54,10 +58,12 @@ export default function CourseForm({ course }: CourseFormProps) {
             price: course?.price || 0,
             accessType: (course?.accessType as 'OPEN' | 'INVITE' | 'PAID') || 'OPEN',
             published: course?.published || false,
-            level: 'BEGINNER',
-            visibility: 'EVERYONE',
+            level: (course?.level as 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED') || 'BEGINNER',
+            visibility: (course?.visibility as 'EVERYONE' | 'SIGNED_IN') || 'EVERYONE',
             imageUrl: course?.imageUrl || '',
             previewVideoUrl: course?.previewVideoUrl || '',
+            tags: course?.tags || '',
+            website: course?.website || '',
         },
     });
 
@@ -71,7 +77,7 @@ export default function CourseForm({ course }: CourseFormProps) {
         const isImage = fieldName === 'imageUrl';
         const maxSize = isImage ? 5 * 1024 * 1024 : 50 * 1024 * 1024; // 5MB for images, 50MB for videos
         const maxSizeMB = Math.round(maxSize / (1024 * 1024));
-        
+
         if (file.size > maxSize) {
             setError(`File too large. Max size is ${maxSizeMB}MB for ${isImage ? 'images' : 'videos'}`);
             return;
@@ -81,7 +87,7 @@ export default function CourseForm({ course }: CourseFormProps) {
         const allowedImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
         const allowedVideoTypes = ['video/mp4', 'video/webm', 'video/ogg'];
         const allowedTypes = isImage ? allowedImageTypes : allowedVideoTypes;
-        
+
         if (!allowedTypes.includes(file.type)) {
             setError(`Invalid file type. Allowed types: ${isImage ? 'JPEG, PNG, GIF, WebP' : 'MP4, WebM, OGG'}`);
             return;
@@ -106,19 +112,19 @@ export default function CourseForm({ course }: CourseFormProps) {
             }
 
             // Set the URL in form
-            form.setValue(fieldName, data.url, { 
+            form.setValue(fieldName, data.url, {
                 shouldValidate: true,
-                shouldDirty: true 
+                shouldDirty: true
             });
-            
+
             // Trigger form validation to clear any error messages
             form.trigger(fieldName);
-            
+
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Upload failed';
             console.error('File upload error:', errorMessage);
             setError(errorMessage);
-            
+
             // Clear the field if upload failed
             form.setValue(fieldName, '');
         } finally {
@@ -310,6 +316,82 @@ export default function CourseForm({ course }: CourseFormProps) {
                         )}
                     />
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="level"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Level</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isPending}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select level" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="BEGINNER">Beginner</SelectItem>
+                                        <SelectItem value="INTERMEDIATE">Intermediate</SelectItem>
+                                        <SelectItem value="ADVANCED">Advanced</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="visibility"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Visibility</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isPending}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select visibility" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        <SelectItem value="EVERYONE">Public</SelectItem>
+                                        <SelectItem value="SIGNED_IN">Registered Users Only</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+
+                <FormField
+                    control={form.control}
+                    name="tags"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Tags</FormLabel>
+                            <FormControl>
+                                <Input placeholder="React, Frontend, Web (comma separated)" {...field} disabled={isPending} />
+                            </FormControl>
+                            <FormDescription>Helps students find your course.</FormDescription>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="website"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Website / Resource URL</FormLabel>
+                            <FormControl>
+                                <Input placeholder="https://..." {...field} disabled={isPending} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
 
                 <FormField
                     control={form.control}

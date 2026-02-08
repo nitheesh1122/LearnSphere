@@ -6,9 +6,9 @@ import { ChevronLeft } from 'lucide-react';
 import CourseEditForm from '@/components/instructor/course-edit-form';
 
 interface EditCoursePageProps {
-    params: {
+    params: Promise<{
         courseId: string;
-    };
+    }>;
 }
 
 export default async function EditCoursePage({ params }: { params: Promise<{ courseId: string }> }) {

@@ -7,7 +7,7 @@ export default async function TestPage() {
     return (
         <div className="container mx-auto py-8 px-4">
             <h1 className="text-2xl font-bold mb-6">Database Connection Test</h1>
-            
+
             <div className="space-y-4">
                 <div className="p-4 border rounded-lg">
                     <h2 className="font-semibold mb-2">Connection Status</h2>
@@ -53,15 +53,15 @@ export default async function TestPage() {
                                 // Get first course ID for testing
                                 const { testDatabaseConnection: getConnection } = await import('@/lib/actions/test-db');
                                 const connection = await getConnection();
-                                
-                                if (connection.success && connection.courseCount > 0) {
+
+                                if (connection.success && connection.courseCount && connection.courseCount > 0) {
                                     // We need to get a course ID - for now, let's use a hardcoded one or fetch
                                     const prisma = await import('@/lib/prisma').then(m => m.default);
                                     const firstCourse = await prisma.course.findFirst({
                                         where: { published: true },
                                         select: { id: true },
                                     });
-                                    
+
                                     if (firstCourse) {
                                         const result = await createTestEnrollment(firstCourse.id);
                                         console.log('Test enrollment result:', result);

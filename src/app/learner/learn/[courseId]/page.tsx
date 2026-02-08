@@ -8,9 +8,9 @@ import { checkCourseCompletion } from '@/lib/actions/certificate';
 import CourseCompletion from '@/components/learner/course-completion';
 
 interface CourseLearnPageProps {
-    params: {
+    params: Promise<{
         courseId: string;
-    };
+    }>;
 }
 
 export default async function CourseLearnPage({ params }: { params: Promise<{ courseId: string }> }) {

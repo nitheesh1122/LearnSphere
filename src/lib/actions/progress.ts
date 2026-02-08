@@ -3,6 +3,7 @@
 import prisma from '../prisma';
 import { auth } from '@/auth';
 import { revalidatePath } from 'next/cache';
+import { recordLearningActivity } from './activity';
 
 export async function markLessonComplete(lessonId: string) {
     const session = await auth();
@@ -59,6 +60,9 @@ export async function markLessonComplete(lessonId: string) {
 
         // Check if course is now complete
         await checkAndMarkCourseComplete(lesson.courseId, session.user.id);
+
+        // Record activity
+        await recordLearningActivity(session.user.id, 'LESSON_COMPLETE');
 
         revalidatePath(`/learner/learn/${lesson.courseId}`);
         revalidatePath(`/learner/dashboard`);
@@ -133,5 +137,16 @@ async function checkAndMarkCourseComplete(courseId: string, userId: string) {
                 completedAt: new Date(),
             },
         });
+
+        // Record activity
+        await recordLearningActivity(userId, 'COURSE_COMPLETE');
+    }
+}
+export async function reportLessonTime(lessonId: string, seconds: number) {
+    const session = await auth();
+    if (!session?.user?.id) return;
+
+    if (seconds >= 300) { // 5 minutes
+        await recordLearningActivity(session.user.id, 'LESSON_VIEW', seconds);
     }
 }

@@ -11,7 +11,7 @@ interface CertificateVerifyPageProps {
 
 export default async function CertificateVerifyPage({ params }: CertificateVerifyPageProps) {
     const { certificateId } = await params;
-    
+
     // Validate certificateId parameter
     if (!certificateId || typeof certificateId !== 'string') {
         return (
@@ -27,7 +27,7 @@ export default async function CertificateVerifyPage({ params }: CertificateVerif
             </div>
         );
     }
-    
+
     const result = await verifyCertificate(certificateId);
 
     return (

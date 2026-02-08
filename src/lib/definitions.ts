@@ -47,3 +47,44 @@ export const LessonFormSchema = z.object({
     isPreview: z.boolean().optional(),
 });
 
+export const ProfileFormSchema = z.object({
+    name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
+    bio: z.string().max(500, { message: 'Bio must be less than 500 characters.' }).optional(),
+    timezone: z.string().optional(),
+    language: z.string().optional(),
+    // Roles specific (Instructor)
+    title: z.string().optional(),
+    expertiseTags: z.string().optional(), // Comma separated
+    publicBio: z.string().max(1000, { message: 'Public bio must be less than 1000 characters.' }).optional(),
+});
+
+export const PasswordChangeSchema = z.object({
+    currentPassword: z.string().min(1, { message: 'Current password is required.' }),
+    newPassword: z.string().min(6, { message: 'New password must be at least 6 characters.' }),
+    confirmPassword: z.string().min(6),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+});
+
+export const NotificationSettingsSchema = z.object({
+    courseUpdates: z.boolean(),
+    quizCompletion: z.boolean(),
+    certificateIssued: z.boolean(),
+    platformAnnouncements: z.boolean(),
+});
+
+export const LearnerPreferencesSchema = z.object({
+    resumePlayback: z.boolean(),
+    autoNextLesson: z.boolean(),
+    emailFromInstructors: z.boolean(),
+});
+
+export const InstructorPreferencesSchema = z.object({
+    notifyNewEnrollment: z.boolean(),
+    notifyCourseCompletion: z.boolean(),
+    notifyQuizFailures: z.boolean(),
+    defaultLessonVisibility: z.enum(['PUBLIC', 'PRIVATE']),
+    defaultQuizRetryLimit: z.number().min(0),
+});
+

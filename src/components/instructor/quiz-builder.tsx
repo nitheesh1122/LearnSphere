@@ -1,4 +1,8 @@
-'use client';
+"use client";
+
+import { updateQuizQuestions } from '@/lib/actions/quiz';
+import { useTransition } from 'react';
+import { toast } from 'sonner';
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -49,7 +53,7 @@ interface QuizBuilderProps {
 export default function QuizBuilder({ quiz, courseId }: QuizBuilderProps) {
     console.log('QuizBuilder Component: Received quiz data:', quiz);
     console.log('QuizBuilder Component: Questions count:', quiz.questions?.length || 0);
-    
+
     const [questions, setQuestions] = useState<Question[]>(quiz.questions || []);
     const [passingScore, setPassingScore] = useState(quiz.passingScore);
     const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
@@ -63,19 +67,19 @@ export default function QuizBuilder({ quiz, courseId }: QuizBuilderProps) {
             points: 10,
             order: questions.length,
             required: true,
-            answers: type === 'TRUE_FALSE' 
+            answers: type === 'TRUE_FALSE'
                 ? [
                     { id: `tf-true-${Date.now()}`, text: 'True', isCorrect: false },
                     { id: `tf-false-${Date.now()}`, text: 'False', isCorrect: false },
                 ]
                 : type === 'MULTIPLE_CHOICE'
-                ? [
-                    { id: `temp-a1-${Date.now()}`, text: '', isCorrect: false },
-                    { id: `temp-a2-${Date.now()}`, text: '', isCorrect: false },
-                    { id: `temp-a3-${Date.now()}`, text: '', isCorrect: false },
-                    { id: `temp-a4-${Date.now()}`, text: '', isCorrect: false },
-                ]
-                : [],
+                    ? [
+                        { id: `temp-a1-${Date.now()}`, text: '', isCorrect: false },
+                        { id: `temp-a2-${Date.now()}`, text: '', isCorrect: false },
+                        { id: `temp-a3-${Date.now()}`, text: '', isCorrect: false },
+                        { id: `temp-a4-${Date.now()}`, text: '', isCorrect: false },
+                    ]
+                    : [],
         };
         setQuestions([...questions, newQuestion]);
         setEditingQuestionId(newQuestion.id);
@@ -166,9 +170,9 @@ export default function QuizBuilder({ quiz, courseId }: QuizBuilderProps) {
         setIsSaving(true);
         try {
             console.log('Saving quiz:', { questions, passingScore });
-            
+
             const result = await saveQuiz(quiz.id, { questions, passingScore });
-            
+
             if (result.success) {
                 alert('Quiz saved successfully!');
             } else {
@@ -218,8 +222,8 @@ export default function QuizBuilder({ quiz, courseId }: QuizBuilderProps) {
             <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <h4 className="font-semibold text-yellow-900 mb-2">Quiz Builder Debug</h4>
                 <p className="text-sm text-yellow-800">
-                    Quiz ID: {quiz.id}<br/>
-                    Questions: {questions.length}<br/>
+                    Quiz ID: {quiz.id}<br />
+                    Questions: {questions.length}<br />
                     Passing Score: {passingScore}%
                 </p>
             </div>
@@ -250,9 +254,9 @@ export default function QuizBuilder({ quiz, courseId }: QuizBuilderProps) {
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Total Points</label>
-                            <Input 
-                                value={questions.reduce((sum, q) => sum + q.points, 0)} 
-                                disabled 
+                            <Input
+                                value={questions.reduce((sum, q) => sum + q.points, 0)}
+                                disabled
                             />
                         </div>
                         <div className="space-y-2">
@@ -448,8 +452,8 @@ export default function QuizBuilder({ quiz, courseId }: QuizBuilderProps) {
                                                     onCheckedChange={() => toggleCorrectAnswer(question.id, answer.id)}
                                                 />
                                                 <Input
-                                                    placeholder={question.type === 'TRUE_FALSE' 
-                                                        ? answer.text 
+                                                    placeholder={question.type === 'TRUE_FALSE'
+                                                        ? answer.text
                                                         : `Option ${ansIdx + 1}`
                                                     }
                                                     value={answer.text}
@@ -474,7 +478,7 @@ export default function QuizBuilder({ quiz, courseId }: QuizBuilderProps) {
                                                 )}
                                             </div>
                                         ))}
-                                        
+
                                         {question.type === 'MULTIPLE_CHOICE' && (
                                             <p className="text-xs text-muted-foreground">
                                                 💡 Tip: Only one answer can be marked as correct for multiple choice questions
@@ -492,7 +496,7 @@ export default function QuizBuilder({ quiz, courseId }: QuizBuilderProps) {
                                             rows={2}
                                         />
                                         <p className="text-xs text-muted-foreground">
-                                            {question.type === 'SHORT_ANSWER' 
+                                            {question.type === 'SHORT_ANSWER'
                                                 ? '💡 Students will provide a brief text answer. You can manually grade these.'
                                                 : '💡 Students will write a detailed essay. You can manually grade these based on content, structure, and quality.'
                                             }
@@ -510,8 +514,8 @@ export default function QuizBuilder({ quiz, courseId }: QuizBuilderProps) {
                 <Button variant="outline">
                     Preview Quiz
                 </Button>
-                <Button 
-                    size="lg" 
+                <Button
+                    size="lg"
                     disabled={questions.length === 0 || isSaving}
                     onClick={handleSaveQuiz}
                 >
@@ -521,3 +525,4 @@ export default function QuizBuilder({ quiz, courseId }: QuizBuilderProps) {
         </div>
     );
 }
+

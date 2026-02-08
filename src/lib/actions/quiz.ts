@@ -3,6 +3,7 @@
 import prisma from '../prisma';
 import { auth } from '@/auth';
 import { revalidatePath } from 'next/cache';
+import { recordLearningActivity } from './activity';
 
 export async function startQuizAttempt(quizId: string) {
     const session = await auth();
@@ -88,6 +89,9 @@ export async function submitQuizAttempt(attemptId: string, answers: Record<strin
                 completedAt: new Date(),
             },
         });
+
+        // Record activity
+        await recordLearningActivity(session.user.id, 'QUIZ_ATTEMPT');
 
         // If passed, mark content as complete
         if (passed) {
@@ -224,4 +228,76 @@ export async function getQuizAttempts(quizId: string) {
     });
 
     return { attempts };
+}
+
+export async function updateQuizQuestions(
+    quizId: string,
+    data: {
+        passingScore: number;
+        questions: any[];
+    }
+) {
+    const session = await auth();
+    if (!session?.user?.id || session?.user?.role !== 'INSTRUCTOR') {
+        throw new Error('Unauthorized');
+    }
+
+    // Verify ownership via quiz -> content -> course -> instructor
+    const quiz = await prisma.quiz.findUnique({
+        where: { id: quizId },
+        include: {
+            content: {
+                include: {
+                    course: true,
+                },
+            },
+        },
+    });
+
+    if (!quiz || quiz.content.course.instructorId !== session.user.id) {
+        throw new Error('Unauthorized');
+    }
+
+    try {
+        // Transaction to update quiz and replace questions
+        await prisma.$transaction(async (tx) => {
+            // Update quiz settings
+            await tx.quiz.update({
+                where: { id: quizId },
+                data: { passingScore: data.passingScore },
+            });
+
+            // Delete existing questions (cascade deletes answers)
+            // Ideally we'd update existing ones to preserve IDs for stats, but efficient replacement is easier for now.
+            // For V1, we replace all.
+            await tx.question.deleteMany({
+                where: { quizId },
+            });
+
+            // Create new questions
+            for (const [index, q] of data.questions.entries()) {
+                await tx.question.create({
+                    data: {
+                        quizId,
+                        text: q.text,
+                        type: q.type,
+                        points: q.points,
+                        order: index, // Ensure order is preserved
+                        answers: {
+                            create: q.answers.map((a: any) => ({
+                                text: a.text,
+                                isCorrect: a.isCorrect,
+                            })),
+                        },
+                    },
+                });
+            }
+        });
+
+        revalidatePath(`/instructor/courses/${quiz.content.courseId}/quiz/${quizId}`);
+        return { success: true };
+    } catch (error) {
+        console.error('Failed to update quiz:', error);
+        return { error: 'Failed to update quiz' };
+    }
 }

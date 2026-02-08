@@ -5,9 +5,9 @@ import { checkEnrollmentStatus } from '@/lib/actions/enrollment';
 import CourseDetailView from '@/components/learner/course-detail-view';
 
 interface CourseDetailPageProps {
-    params: {
+    params: Promise<{
         courseId: string;
-    };
+    }>;
 }
 
 export default async function CourseDetailPage({ params }: { params: Promise<{ courseId: string }> }) {

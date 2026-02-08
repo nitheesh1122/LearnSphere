@@ -53,10 +53,9 @@ export async function createLesson(courseId: string, data: z.infer<typeof Lesson
                 type,
                 hidden,
                 order: newOrder,
-                contentUrl,
+                contentUrl: type === 'TEXT' ? description : contentUrl,
                 isPreview: isPreview || false,
                 attachments: attachments ? JSON.parse(attachments) : undefined, // Parse JSON string
-                // description is not in CourseContent yet? Wait, let me check schema.
             },
         });
 
@@ -112,7 +111,7 @@ export async function updateLesson(courseId: string, lessonId: string, data: z.i
     }
 
     try {
-        const { attachments, isPreview, ...rest } = validatedFields.data;
+        const { attachments, isPreview, description, contentUrl, type, ...rest } = validatedFields.data;
 
         // If this lesson is marked as preview, unmark all other lessons
         if (isPreview) {
@@ -122,14 +121,20 @@ export async function updateLesson(courseId: string, lessonId: string, data: z.i
             });
         }
 
+        // For TEXT type, we store the description (markdown) in contentUrl
+        const finalContentUrl = type === 'TEXT' ? description : contentUrl;
+
         await prisma.courseContent.update({
             where: { id: lessonId },
             data: {
                 ...rest,
+                type,
+                contentUrl: finalContentUrl,
                 isPreview: isPreview || false,
                 attachments: attachments ? JSON.parse(attachments) : undefined
             },
         });
+
     } catch (error) {
         return { error: 'Failed to update lesson' };
     }

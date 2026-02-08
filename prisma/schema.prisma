@@ -22,6 +22,14 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   isActive      Boolean   @default(true)
+  
+  // Profile & Settings
+  avatarUrl     String?
+  bio           String?
+  timezone      String?
+  language      String?    @default("en")
+  notificationPreferences Json?
+  privacySettings         Json?
 
   // Relations
   roles         UserRole[]
@@ -30,10 +38,13 @@ model User {
   badges        UserBadge[]
   certificates  Certificate[]
   quizAttempts  QuizAttempt[]
+  learningActivities LearningActivity[]
+  learnerPreferences LearnerPreferences?
   
   // Relations: As Instructor/Admin
   instructedCourses Course[]     @relation("Instructor")
   sentInvites       Invitation[] @relation("Inviter")
+  instructorProfile  InstructorProfile?
 }
 
 model Role {
@@ -246,7 +257,6 @@ model DropOffAlert {
   
   // Logic handled by worker/cron, relations not strictly enforced here but IDs stored
 }
-
 model Invitation {
   id        String   @id @default(uuid())
   email     String
@@ -261,4 +271,43 @@ model Invitation {
   course    Course?  @relation(fields: [courseId], references: [id])
   
   @@index([email])
+}
+
+model LearningActivity {
+  id            String    @id @default(uuid())
+  userId        String
+  activityDate  DateTime  // normalized to YYYY-MM-DD 00:00:00
+  activityCount Int       @default(0)
+  totalTimeSpent Int      @default(0) // seconds
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, activityDate])
+  @@index([userId, activityDate])
+}
+
+model InstructorProfile {
+  id            String    @id @default(uuid())
+  userId        String    @unique
+  title         String?
+  expertiseTags String[]
+  publicBio     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LearnerPreferences {
+  id            String    @id @default(uuid())
+  userId        String    @unique
+  resumePlayback Boolean  @default(true)
+  autoNextLesson Boolean  @default(false)
+  emailFromInstructors Boolean @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
