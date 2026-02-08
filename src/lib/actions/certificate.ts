@@ -83,7 +83,7 @@ export async function generateCertificate(courseId: string) {
             return { error: 'Course not completed yet' };
         }
 
-        // Get enrollment
+        // Get enrollment with user and course data
         const enrollment = await prisma.enrollment.findUnique({
             where: {
                 userId_courseId: {
@@ -92,8 +92,21 @@ export async function generateCertificate(courseId: string) {
                 },
             },
             include: {
-                course: true,
-                user: true,
+                course: {
+                    include: {
+                        instructor: {
+                            select: {
+                                name: true,
+                            },
+                        },
+                    },
+                },
+                user: {
+                    select: {
+                        name: true,
+                        email: true,
+                    },
+                },
             },
         });
 
@@ -130,8 +143,16 @@ export async function generateCertificate(courseId: string) {
                 data: {
                     userId: session.user.id,
                     courseId,
-                    pdfUrl: '', // Placeholder, can be updated later
+                    pdfUrl: '', // Will be set after creation
                     issuedAt: new Date(),
+                },
+            });
+            
+            // Update PDF URL after creation
+            certificate = await prisma.certificate.update({
+                where: { id: certificate.id },
+                data: {
+                    pdfUrl: `/api/certificate/pdf/${certificate.id}`,
                 },
             });
         }
@@ -143,6 +164,10 @@ export async function generateCertificate(courseId: string) {
             certificate: {
                 id: certificate.id,
                 issuedAt: certificate.issuedAt,
+                userName: enrollment.user.name || 'Unknown',
+                courseName: enrollment.course.title || 'Unknown',
+                instructorName: enrollment.course.instructor?.name || 'Unknown',
+                pdfUrl: certificate.pdfUrl,
             },
         };
     } catch (error) {

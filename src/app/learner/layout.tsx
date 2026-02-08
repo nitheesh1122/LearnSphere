@@ -9,10 +9,13 @@ export default function LearnerLayout({
     return (
         <div className="min-h-screen flex flex-col">
             <header className="border-b h-16 flex items-center px-6 justify-between bg-white text-black">
-                <div className="font-bold text-xl">LearnSphere</div>
+                <Link href="/" className="font-bold text-xl hover:opacity-80 transition-opacity">
+                    LearnSphere
+                </Link>
                 <nav className="flex gap-4 text-sm font-medium">
                     <Link href="/learner/dashboard" className="hover:underline">Dashboard</Link>
                     <Link href="/learner/my-courses" className="hover:underline">My Courses</Link>
+                    <Link href="/learner/settings" className="hover:underline">Settings</Link>
                     <Link href="/learner/catalog" className="hover:underline">Catalog</Link>
                 </nav>
                 <UserNav />

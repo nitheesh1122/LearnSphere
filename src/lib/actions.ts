@@ -20,16 +20,33 @@ export async function authenticate(
             return 'Invalid inputs.';
         }
 
+        // Get user to determine role for redirect
+        const user = await prisma.user.findUnique({
+            where: { email: data.email as string },
+            include: { roles: { include: { role: true } } }
+        });
+
+        if (!user) {
+            return 'Invalid credentials.';
+        }
+
+        const primaryRole = (user as any).roles[0]?.role.name || 'LEARNER';
+
         await signIn('credentials', {
             email: data.email,
             password: data.password,
+            redirect: false, // We'll handle redirect manually
         });
 
-        // If signIn is successful with redirect:false, it returns nothing but sets cookie
-        // We handle client-side redirect or throw error if it failed?
-        // Actually with v5, strict redirect:false might require manual handling.
-        // Let's use redirect:true by default or handle logic.
-        // Reverting to standard handling:
+        // Redirect based on user role
+        if (primaryRole === 'ADMIN') {
+            redirect('/admin');
+        } else if (primaryRole === 'INSTRUCTOR') {
+            redirect('/instructor');
+        } else {
+            redirect('/learner');
+        }
+
     } catch (error) {
         if (error instanceof AuthError) {
             switch (error.type) {

@@ -9,7 +9,9 @@ export default function InstructorLayout({
     return (
         <div className="min-h-screen flex flex-col">
             <header className="border-b h-16 flex items-center px-6 justify-between bg-white text-black">
-                <div className="font-bold text-xl">LearnSphere Instructor</div>
+                <Link href="/" className="font-bold text-xl hover:opacity-80 transition-opacity">
+                    LearnSphere Instructor
+                </Link>
                 <nav className="flex gap-4 text-sm font-medium">
                     <Link href="/instructor" className="hover:underline">Dashboard</Link>
                     <Link href="/instructor/courses" className="hover:underline">My Courses</Link>

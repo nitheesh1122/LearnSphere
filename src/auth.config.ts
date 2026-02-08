@@ -10,47 +10,37 @@ export const authConfig = {
             const isLoggedIn = !!auth?.user;
             const userRole = auth?.user?.role;
 
-            const isAdminRoute = nextUrl.pathname.startsWith('/admin');
-            const isInstructorRoute = nextUrl.pathname.startsWith('/instructor');
-            const isLearnerRoute = nextUrl.pathname.startsWith('/learner');
-            const isAuthRoute = nextUrl.pathname.startsWith('/login') || nextUrl.pathname.startsWith('/register');
+            // Public routes that don't require authentication
+            const publicRoutes = ['/login', '/register', '/', '/search'];
+            const isPublicRoute = publicRoutes.includes(nextUrl.pathname);
 
-            if (isAuthRoute) {
-                if (isLoggedIn) {
-                    // Redirect to respective dashboard
-                    if (userRole === 'ADMIN') return Response.redirect(new URL('/admin', nextUrl));
-                    if (userRole === 'INSTRUCTOR') return Response.redirect(new URL('/instructor', nextUrl));
-                    return Response.redirect(new URL('/learner', nextUrl));
-                }
+            // Allow access to public routes
+            if (isPublicRoute) {
                 return true;
             }
 
+            // If not logged in, redirect to login
+            if (!isLoggedIn) {
+                return false; // This will redirect to login page
+            }
+
+            const isAdminRoute = nextUrl.pathname.startsWith('/admin');
+            const isInstructorRoute = nextUrl.pathname.startsWith('/instructor');
+            const isLearnerRoute = nextUrl.pathname.startsWith('/learner');
+
             if (isAdminRoute) {
-                if (!isLoggedIn) return false;
                 return userRole === 'ADMIN';
             }
 
             if (isInstructorRoute) {
-                if (!isLoggedIn) return false;
-                return userRole === 'INSTRUCTOR' || userRole === 'ADMIN'; // Admin can access instructor? Maybe. Strict for now:
-                // Prompt said "Instructor cannot access admin", "Learner cannot access admin or instructor"
-                // Let's keep it strict.
+                return userRole === 'INSTRUCTOR' || userRole === 'ADMIN';
             }
 
             if (isLearnerRoute) {
-                if (!isLoggedIn) return false;
-                return userRole === 'LEARNER' || userRole === 'ADMIN'; // Admin can likely view learner view? 
-                // For Phase 1 strictness:
-                // actually ADMIN usually has god mode.
-                // Let's allow ADMIN to access everything for debugging, or keep strict. 
-                // User said "Instructor cannot access admin", "Learner cannot access admin or instructor".
-                // It didn't explicitly say "Admin CAN access instructor/learner routes" but implied "Admin can access everything".
-                // So I will allow ADMIN to access all.
-                if (userRole === 'ADMIN') return true;
-                return userRole === 'LEARNER';
+                return userRole === 'LEARNER' || userRole === 'ADMIN';
             }
 
-            // Allow access to other routes (landing page, api, etc)
+            // Allow access to other routes
             return true;
         },
         async session({ session, token }) {

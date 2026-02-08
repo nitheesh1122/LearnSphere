@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export function Hero() {
     return (
@@ -15,12 +16,16 @@ export function Hero() {
                             </p>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-4">
-                            <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white rounded-md px-8 text-lg h-12">
-                                Get Started for Free
-                            </Button>
-                            <Button variant="outline" size="lg" className="rounded-md px-8 text-lg h-12">
-                                View Plans
-                            </Button>
+                            <Link href="/register">
+                                <Button size="lg" className="bg-green-600 hover:bg-green-700 text-white rounded-md px-8 text-lg h-12">
+                                    Get Started for Free
+                                </Button>
+                            </Link>
+                            <Link href="/catalog">
+                                <Button variant="outline" size="lg" className="rounded-md px-8 text-lg h-12">
+                                    View Plans
+                                </Button>
+                            </Link>
                         </div>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             <div className="flex -space-x-2">
@@ -34,10 +39,11 @@ export function Hero() {
                     <div className="mx-auto w-full max-w-[500px] lg:max-w-none">
                         <div className="aspect-square overflow-hidden rounded-xl bg-gray-100 object-cover object-center sm:aspect-video lg:aspect-square relative">
                             <div className="absolute inset-0 bg-gradient-to-tr from-green-100 to-blue-50 opacity-50"></div>
-                            {/* Placeholder for Hero Image */}
-                            <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-                                <span className="text-lg font-medium">Hero Image Placeholder</span>
-                            </div>
+                            <img 
+                                src="https://images.unsplash.com/photo-1522202176988-6732805c08d5?auto=format&fit=crop&w=800&q=80"
+                                alt="Students learning online"
+                                className="absolute inset-0 w-full h-full object-cover"
+                            />
                         </div>
                     </div>
                 </div>
