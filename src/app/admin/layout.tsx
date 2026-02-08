@@ -9,7 +9,9 @@ export default function AdminLayout({
     return (
         <div className="min-h-screen flex flex-col">
             <header className="border-b h-16 flex items-center px-6 justify-between bg-white text-black">
-                <div className="font-bold text-xl">LearnSphere Admin</div>
+                <Link href="/" className="font-bold text-xl hover:opacity-80 transition-opacity">
+                    LearnSphere Admin
+                </Link>
                 <nav className="flex gap-4 text-sm font-medium">
                     <Link href="/admin/dashboard" className="hover:underline">Dashboard</Link>
                     <Link href="/admin/users" className="hover:underline">Users</Link>

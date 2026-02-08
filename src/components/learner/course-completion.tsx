@@ -33,15 +33,19 @@ export default function CourseCompletion({
                 if (result.error) {
                     setError(result.error);
                 } else if (result.success && result.certificate) {
+                    console.log('Certificate generated:', result.certificate);
                     setCertificate(result.certificate);
                     router.refresh();
+                } else {
+                    console.error('Certificate generation failed:', result);
+                    setError('Failed to generate certificate');
                 }
             });
         });
     };
 
-    const verificationUrl = certificate
-        ? `${window.location.origin}/verify/certificate/${certificate.certificateId}`
+    const verificationUrl = certificate?.id
+        ? `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/verify/certificate/${certificate.id}`
         : '';
 
     return (
@@ -120,6 +124,15 @@ export default function CourseCompletion({
                         <div className="flex gap-2">
                             <Button
                                 variant="outline"
+                                onClick={() => certificate?.id && window.open(`/api/certificate/pdf/${certificate.id}`, '_blank')}
+                                className="flex-1"
+                                disabled={!certificate?.id}
+                            >
+                                <Download className="mr-2 h-4 w-4" />
+                                Download Certificate
+                            </Button>
+                            <Button
+                                variant="default"
                                 onClick={() => window.open(verificationUrl, '_blank')}
                                 className="flex-1"
                             >
