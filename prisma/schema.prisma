@@ -1,0 +1,264 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// Core Identity & Access
+// -----------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String
+  name          String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  isActive      Boolean   @default(true)
+
+  // Relations
+  roles         UserRole[]
+  enrollments   Enrollment[]
+  progress      ContentProgress[]
+  badges        UserBadge[]
+  certificates  Certificate[]
+  quizAttempts  QuizAttempt[]
+  
+  // Relations: As Instructor/Admin
+  instructedCourses Course[]     @relation("Instructor")
+  sentInvites       Invitation[] @relation("Inviter")
+}
+
+model Role {
+  id             String         @id @default(uuid())
+  name           String         @unique // ADMIN, INSTRUCTOR, LEARNER
+  userRoles      UserRole[]
+  accessPolicies AccessPolicy[]
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model AccessPolicy {
+  id           String @id @default(uuid())
+  roleId       String
+  resourceType String // e.g. "COURSE", "SYSTEM"
+  action       String // e.g. "READ", "WRITE", "DELETE"
+  conditions   Json?  // specific constraints
+  
+  role         Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+}
+
+// -----------------------------------------------------------------------------
+// Course Management
+// -----------------------------------------------------------------------------
+
+model Course {
+  id           String   @id @default(uuid())
+  title        String
+  description  String?
+  published    Boolean  @default(false)
+  instructorId String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  deletedAt    DateTime?
+  price        Float?
+  accessType   String   @default("OPEN") // OPEN, INVITE, PAID
+  imageUrl     String?
+  previewVideoUrl String?
+  
+  // Phase 4: Instructor Advanced
+  tags         String[]
+  website      String?
+  responsibleId String? // Course Admin/Responsible
+  level        String   @default("BEGINNER")
+  views        Int      @default(0)
+  visibility   String   @default("EVERYONE") // EVERYONE, SIGNED_IN
+
+  instructor   User     @relation("Instructor", fields: [instructorId], references: [id])
+  contents     CourseContent[]
+  enrollments  Enrollment[]
+  badges       Badge[]
+  invitations  Invitation[]
+
+  @@index([instructorId])
+}
+
+model CourseContent {
+  id        String   @id @default(uuid())
+  courseId  String
+  title     String
+  type      String   // VIDEO, TEXT, QUIZ, IMAGE, DOCUMENT
+  order     Int
+  hidden    Boolean  @default(false)
+  
+  // Content Logic
+  contentUrl String? // video url, markdown source, etc.
+  isPreview  Boolean  @default(false) // Mark as course preview video
+  
+  // Phase 4: Attachments
+  attachments Json? // Array of { name, url, type }
+
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  quiz      Quiz?
+  progress  ContentProgress[]
+
+  @@index([courseId])
+}
+
+model Quiz {
+  id           String        @id @default(uuid())
+  contentId    String        @unique
+  passingScore Int           @default(70)
+  
+  // Phase 4: Relational Quiz
+  questions    Question[]
+  attempts     QuizAttempt[]
+  
+  content      CourseContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+}
+
+model Question {
+  id       String   @id @default(uuid())
+  quizId   String
+  text     String
+  type     String   @default("MULTIPLE_CHOICE")
+  points   Int      @default(10)
+  order    Int      @default(0)
+
+  answers  Answer[]
+  quiz     Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+}
+
+model Answer {
+  id         String   @id @default(uuid())
+  questionId String
+  text       String
+  isCorrect  Boolean  @default(false)
+
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+model QuizAttempt {
+  id          String   @id @default(uuid())
+  quizId      String
+  userId      String
+  score       Int
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+  answers     Json?    // Snapshot of user answers
+
+  quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([quizId])
+}
+
+// -----------------------------------------------------------------------------
+// Learning & Progress
+// -----------------------------------------------------------------------------
+
+model Enrollment {
+  id          String   @id @default(uuid())
+  userId      String
+  courseId    String
+  enrolledAt  DateTime @default(now())
+  completedAt DateTime?
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@index([userId])
+}
+
+model ContentProgress {
+  id            String   @id @default(uuid())
+  userId        String
+  contentId     String
+  isCompleted   Boolean  @default(false)
+  score         Int?
+  lastAccessedAt DateTime @default(now())
+
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content CourseContent @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, contentId])
+}
+
+// -----------------------------------------------------------------------------
+// Gamification & Engagement
+// -----------------------------------------------------------------------------
+
+model Badge {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  iconUrl     String
+  courseId    String? // Nullable: Global badges vs Course badges
+  
+  course      Course?  @relation(fields: [courseId], references: [id])
+  userBadges  UserBadge[]
+}
+
+model UserBadge {
+  userId    String
+  badgeId   String
+  awardedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@id([userId, badgeId])
+}
+
+model Certificate {
+  id        String   @id @default(uuid())
+  userId    String
+  courseId  String
+  issuedAt  DateTime @default(now())
+  pdfUrl    String   // URL to generated PDF certificate
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Optional relations to course if needed, but keeping lightweight
+}
+
+model DropOffAlert {
+  id           String   @id @default(uuid())
+  userId       String
+  courseId     String
+  lastActivity DateTime
+  alertSent    Boolean  @default(false)
+  
+  // Logic handled by worker/cron, relations not strictly enforced here but IDs stored
+}
+
+model Invitation {
+  id        String   @id @default(uuid())
+  email     String
+  token     String   @unique
+  roleName  String   // e.g. "INSTRUCTOR"
+  expiresAt DateTime
+  status    String   @default("PENDING") // PENDING, ACCEPTED
+  inviterId String
+  courseId  String?
+  
+  inviter   User     @relation("Inviter", fields: [inviterId], references: [id])
+  course    Course?  @relation(fields: [courseId], references: [id])
+  
+  @@index([email])
+}

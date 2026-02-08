@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Course" ADD COLUMN     "accessType" TEXT NOT NULL DEFAULT 'OPEN',
+ADD COLUMN     "price" DOUBLE PRECISION;
