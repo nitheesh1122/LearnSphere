@@ -13,8 +13,8 @@ async function getUser(email: string) {
         });
         return user;
     } catch (error) {
-        console.error('Failed to fetch user:', error);
-        throw new Error('Failed to fetch user.');
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        throw new Error(`Failed to fetch user: ${errorMessage}`);
     }
 }
 
@@ -50,7 +50,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
                         };
                     }
                 }
-                console.log('Invalid credentials');
+                // Invalid credentials - no console log in production
                 return null;
             },
         }),
@@ -59,15 +59,14 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         ...authConfig.callbacks,
         async jwt({ token, user }) {
             if (user) {
-                token.role = (user as any).role;
-                token.id = user.id!; // Assert non-null since user from DB always has id
+                token.role = user.role;
+                token.id = user.id || '';
             }
             return token;
         },
         async session({ session, token }) {
             if (session.user) {
                 session.user.id = token.id as string;
-                // @ts-ignore
                 session.user.role = token.role as string;
             }
             return session;

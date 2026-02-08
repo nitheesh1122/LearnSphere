@@ -36,6 +36,7 @@ interface LessonFormProps {
         title: string;
         type: string;
         hidden: boolean;
+        isPreview?: boolean;
         contentUrl?: string | null;
         description?: string | null;
         attachments?: any; // Json
@@ -63,8 +64,38 @@ export default function LessonForm({ courseId, lesson, onSuccess, onCancel }: Le
             contentUrl: lesson?.contentUrl || '',
             description: lesson?.description || '',
             attachments: JSON.stringify(initialAttachments),
+            isPreview: lesson?.isPreview || false,
         },
     });
+
+    const [uploading, setUploading] = useState<Record<string, boolean>>({});
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: string, field: any) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setUploading(prev => ({ ...prev, [fieldName]: true }));
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('/api/upload', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) throw new Error('Upload failed');
+
+            const data = await response.json();
+            field.onChange(data.url);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error('File upload error:', errorMessage);
+        } finally {
+            setUploading(prev => ({ ...prev, [fieldName]: false }));
+        }
+    };
 
     const onSubmit = (values: z.infer<typeof LessonFormSchema>) => {
         // Update attachments in values
@@ -96,210 +127,274 @@ export default function LessonForm({ courseId, lesson, onSuccess, onCancel }: Le
     };
 
     return (
-        <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 border p-4 rounded-md bg-white shadow-sm">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="font-semibold text-lg">{lesson ? 'Edit Lesson' : 'New Lesson'}</h3>
-                    {onCancel && <Button variant="ghost" size="sm" onClick={onCancel}>Close</Button>}
-                </div>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 border p-4 rounded-md bg-white shadow-sm">
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="font-semibold text-lg">{lesson ? 'Edit Lesson' : 'New Lesson'}</h3>
+                {onCancel && <Button variant="ghost" size="sm" onClick={onCancel}>Close</Button>}
+            </div>
 
-                <Tabs defaultValue="content" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="content">Content</TabsTrigger>
-                        <TabsTrigger value="settings">Settings</TabsTrigger>
-                        <TabsTrigger value="attachments">Attachments</TabsTrigger>
-                    </TabsList>
+            <Tabs defaultValue="content" className="w-full">
+                <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="content">Content</TabsTrigger>
+                    <TabsTrigger value="quiz" disabled={form.watch('type') !== 'QUIZ'}>Quiz</TabsTrigger>
+                    <TabsTrigger value="settings">Settings</TabsTrigger>
+                    <TabsTrigger value="attachments">Attachments</TabsTrigger>
+                </TabsList>
 
-                    {/* Tab 1: Main Content */}
-                    <TabsContent value="content" className="space-y-4 pt-4">
-                        <FormField
-                            control={form.control}
-                            name="title"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Lesson Title</FormLabel>
+                {/* Tab 1: Main Content */}
+                <TabsContent value="content" className="space-y-4 pt-4">
+                    <FormField
+                        control={form.control}
+                        name="title"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Lesson Title</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="e.g. Introduction to React" {...field} disabled={isPending} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="type"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Content Type</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isPending}>
                                     <FormControl>
-                                        <Input placeholder="e.g. Introduction to React" {...field} disabled={isPending} />
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select type" />
+                                        </SelectTrigger>
                                     </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
+                                    <SelectContent>
+                                        <SelectItem value="VIDEO">Video</SelectItem>
+                                        <SelectItem value="TEXT">Text / Article</SelectItem>
+                                        <SelectItem value="QUIZ">Quiz</SelectItem>
+                                        <SelectItem value="DOCUMENT">Document (PDF)</SelectItem>
+                                        <SelectItem value="IMAGE">Image</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
 
+                    {/* Conditional Fields based on Type */}
+                    {form.watch('type') === 'VIDEO' && (
                         <FormField
                             control={form.control}
-                            name="type"
+                            name="contentUrl"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Content Type</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isPending}>
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select type" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="VIDEO">Video</SelectItem>
-                                            <SelectItem value="TEXT">Text / Article</SelectItem>
-                                            <SelectItem value="QUIZ">Quiz</SelectItem>
-                                            <SelectItem value="DOCUMENT">Document (PDF)</SelectItem>
-                                            <SelectItem value="IMAGE">Image</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <FormLabel>Video File</FormLabel>
+                                    <FormControl>
+                                        <div className="space-y-2">
+                                            <Input
+                                                type="file"
+                                                accept="video/*"
+                                                disabled={isPending || uploading['contentUrl']}
+                                                onChange={(e) => handleFileUpload(e, 'contentUrl', field)}
+                                            />
+                                            {uploading['contentUrl'] && <div className="text-xs text-muted-foreground">Uploading...</div>}
+                                            {field.value && (
+                                                <div className="relative aspect-video rounded-md overflow-hidden border bg-black">
+                                                    <video src={field.value} controls className="w-full h-full" />
+                                                </div>
+                                            )}
+                                            <Input type="hidden" {...field} />
+                                        </div>
+                                    </FormControl>
+                                    <FormDescription>Upload your video lesson directly (mp4, webm).</FormDescription>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
+                    )}
 
-                        {/* Conditional Fields based on Type */}
-                        {form.watch('type') === 'VIDEO' && (
-                            <FormField
-                                control={form.control}
-                                name="contentUrl"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Video URL</FormLabel>
-                                        <FormControl>
-                                            <div className="flex gap-2">
-                                                <Input placeholder="https://youtube.com/..." {...field} disabled={isPending} />
-                                                <Button type="button" variant="outline" size="icon">
-                                                    <Video className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </FormControl>
-                                        <FormDescription>Embed URL for YouTube, Vimeo, or Loom.</FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        )}
-
-                        {form.watch('type') === 'TEXT' && (
-                            <FormField
-                                control={form.control}
-                                name="description"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Content (Markdown)</FormLabel>
-                                        <FormControl>
-                                            <Textarea
-                                                placeholder="# Lesson Content..."
-                                                className="min-h-[200px] font-mono"
-                                                {...field}
-                                                disabled={isPending}
-                                            />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        )}
-
-                        {form.watch('type') === 'QUIZ' && (
-                            <div className="p-4 border border-dashed rounded text-center text-muted-foreground">
-                                Quiz questions are managed in the Quiz tab.
-                            </div>
-                        )}
-                    </TabsContent>
-
-                    {/* Tab 2: Settings */}
-                    <TabsContent value="settings" className="space-y-4 pt-4">
+                    {form.watch('type') === 'TEXT' && (
                         <FormField
                             control={form.control}
                             name="description"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Short Description / Subtitle</FormLabel>
+                                    <FormLabel>Content (Markdown)</FormLabel>
                                     <FormControl>
-                                        <Textarea placeholder="Brief summary of this lesson..." {...field} disabled={isPending} />
+                                        <Textarea
+                                            placeholder="# Lesson Content..."
+                                            className="min-h-[200px] font-mono"
+                                            {...field}
+                                            disabled={isPending}
+                                        />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )}
                         />
+                    )}
 
-                        <FormField
-                            control={form.control}
-                            name="hidden"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-row items-center space-x-2 space-y-0 p-4 border rounded">
-                                    <FormControl>
-                                        <Checkbox
-                                            checked={field.value}
-                                            onCheckedChange={field.onChange}
-                                            disabled={isPending}
-                                        />
-                                    </FormControl>
-                                    <div className="space-y-1 leading-none">
-                                        <FormLabel>
-                                            Hidden / Draft
-                                        </FormLabel>
-                                        <FormDescription>
-                                            Hide this lesson from students.
-                                        </FormDescription>
-                                    </div>
-                                </FormItem>
-                            )}
-                        />
-                    </TabsContent>
+                    {form.watch('type') === 'QUIZ' && (
+                        <div className="p-4 border border-dashed rounded text-center text-muted-foreground">
+                            <p className="mb-2">Quiz questions are managed in the Quiz tab.</p>
+                            <p className="text-sm">Switch to the Quiz tab above to configure questions.</p>
+                        </div>
+                    )}
+                </TabsContent>
 
-                    {/* Tab 3: Attachments */}
-                    <TabsContent value="attachments" className="space-y-4 pt-4">
+                {/* Tab 2: Quiz */}
+                <TabsContent value="quiz" className="space-y-4 pt-4">
+                    {form.watch('type') === 'QUIZ' ? (
                         <div className="space-y-4">
-                            <div className="text-sm text-muted-foreground">
-                                Add downloadable resources like PDFs, source code, or images.
-                            </div>
-
-                            <div className="space-y-2">
-                                {attachments.map((att, idx) => (
-                                    <div key={idx} className="flex items-center justify-between p-2 border rounded bg-gray-50">
-                                        <div className="flex items-center gap-2">
-                                            <FileText className="h-4 w-4 text-blue-500" />
-                                            <a href={att.url} target="_blank" className="text-sm hover:underline">{att.name}</a>
-                                        </div>
-                                        <Button type="button" variant="ghost" size="sm" onClick={() => removeAttachment(idx)}>
-                                            <Trash2 className="h-4 w-4 text-red-500" />
-                                        </Button>
+                            <div className="text-center p-8 border-2 border-dashed rounded-lg">
+                                <div className="space-y-4">
+                                    <h4 className="text-lg font-semibold">Quiz Configuration</h4>
+                                    <p className="text-muted-foreground">
+                                        After creating this lesson, you'll be able to configure the quiz questions and answers.
+                                    </p>
+                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                        <h5 className="font-semibold text-blue-900 mb-2">Next Steps:</h5>
+                                        <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
+                                            <li>Save this lesson first</li>
+                                            <li>Click on the quiz lesson in your course</li>
+                                            <li>Configure quiz questions and answers</li>
+                                            <li>Set passing score and quiz settings</li>
+                                        </ol>
                                     </div>
-                                ))}
-                            </div>
-
-                            <div className="flex gap-2 items-end border-t pt-4">
-                                <div className="grid gap-2 flex-1">
-                                    <FormLabel>Name</FormLabel>
-                                    <Input
-                                        placeholder="Resource Name"
-                                        value={newAttachment.name}
-                                        onChange={(e) => setNewAttachment({ ...newAttachment, name: e.target.value })}
-                                    />
                                 </div>
-                                <div className="grid gap-2 flex-1">
-                                    <FormLabel>Url</FormLabel>
-                                    <Input
-                                        placeholder="https://..."
-                                        value={newAttachment.url}
-                                        onChange={(e) => setNewAttachment({ ...newAttachment, url: e.target.value })}
-                                    />
-                                </div>
-                                <Button type="button" onClick={addAttachment} disabled={!newAttachment.name || !newAttachment.url}>
-                                    <Plus className="h-4 w-4" />
-                                </Button>
                             </div>
                         </div>
-                    </TabsContent>
-                </Tabs>
-
-                <div className="flex justify-end gap-2 pt-4 border-t">
-                    {onCancel && (
-                        <Button type="button" variant="ghost" onClick={onCancel} disabled={isPending}>
-                            Cancel
-                        </Button>
+                    ) : (
+                        <div className="text-center p-8 border rounded-lg">
+                            <p className="text-muted-foreground">
+                                Select "Quiz" as the content type to configure quiz settings.
+                            </p>
+                        </div>
                     )}
-                    <Button type="submit" disabled={isPending}>
-                        {lesson ? 'Save Changes' : 'Create Lesson'}
+                </TabsContent>
+
+                {/* Tab 3: Settings */}
+                <TabsContent value="settings" className="space-y-4 pt-4">
+                    <FormField
+                        control={form.control}
+                        name="description"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Short Description / Subtitle</FormLabel>
+                                <FormControl>
+                                    <Textarea placeholder="Brief summary of this lesson..." {...field} disabled={isPending} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="hidden"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-2 space-y-0 p-4 border rounded">
+                                <FormControl>
+                                    <Checkbox
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                        disabled={isPending}
+                                    />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                    <FormLabel>
+                                        Hidden / Draft
+                                    </FormLabel>
+                                    <FormDescription>
+                                        Hide this lesson from students.
+                                    </FormDescription>
+                                </div>
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="isPreview"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-2 space-y-0 p-4 border rounded bg-blue-50">
+                                <FormControl>
+                                    <Checkbox
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                        disabled={isPending}
+                                    />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                    <FormLabel>
+                                        Use as Course Preview
+                                    </FormLabel>
+                                    <FormDescription>
+                                        Make this lesson visible as a preview to non-enrolled users on the course page.
+                                    </FormDescription>
+                                </div>
+                            </FormItem>
+                        )}
+                    />
+                </TabsContent>
+
+                {/* Tab 4: Attachments */}
+                <TabsContent value="attachments" className="space-y-4 pt-4">
+                    <div className="space-y-4">
+                        <div className="text-sm text-muted-foreground">
+                            Add downloadable resources like PDFs, source code, or images.
+                        </div>
+
+                        <div className="space-y-2">
+                            {attachments.map((att, idx) => (
+                                <div key={idx} className="flex items-center justify-between p-2 border rounded bg-gray-50">
+                                    <div className="flex items-center gap-2">
+                                        <FileText className="h-4 w-4 text-blue-500" />
+                                        <a href={att.url} target="_blank" className="text-sm hover:underline">{att.name}</a>
+                                    </div>
+                                    <Button type="button" variant="ghost" size="sm" onClick={() => removeAttachment(idx)}>
+                                        <Trash2 className="h-4 w-4 text-red-500" />
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="flex gap-2 items-end border-t pt-4">
+                            <div className="grid gap-2 flex-1">
+                                <FormLabel>Name</FormLabel>
+                                <Input
+                                    placeholder="Resource Name"
+                                    value={newAttachment.name}
+                                    onChange={(e) => setNewAttachment({ ...newAttachment, name: e.target.value })}
+                                />
+                            </div>
+                            <div className="grid gap-2 flex-1">
+                                <FormLabel>Url</FormLabel>
+                                <Input
+                                    placeholder="https://..."
+                                    value={newAttachment.url}
+                                    onChange={(e) => setNewAttachment({ ...newAttachment, url: e.target.value })}
+                                />
+                            </div>
+                            <Button type="button" onClick={addAttachment} disabled={!newAttachment.name || !newAttachment.url}>
+                                <Plus className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                </TabsContent>
+            </Tabs>
+
+            <div className="flex justify-end gap-2 pt-4 border-t">
+                {onCancel && (
+                    <Button type="button" variant="ghost" onClick={onCancel} disabled={isPending}>
+                        Cancel
                     </Button>
-                </div>
-            </form>
-        </Form>
+                )}
+                <Button type="submit" disabled={isPending}>
+                    {lesson ? 'Save Changes' : 'Create Lesson'}
+                </Button>
+            </div>
+        </form>
     );
 }

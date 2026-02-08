@@ -7,14 +7,14 @@ import AnalyticsDashboard from '@/components/instructor/analytics-dashboard';
 import prisma from '@/lib/prisma';
 
 interface AnalyticsPageProps {
-    params: {
+    params: Promise<{
         courseId: string;
-    };
+    }>;
 }
 
 export default async function AnalyticsPage({ params }: AnalyticsPageProps) {
     const session = await auth();
-    const { courseId } = params;
+    const { courseId } = await params;
 
     if (!session?.user?.id) {
         return redirect('/login');

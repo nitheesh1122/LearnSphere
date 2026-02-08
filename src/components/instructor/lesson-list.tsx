@@ -2,10 +2,11 @@
 
 import { useState, useTransition } from 'react';
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash, Plus, MoreVertical, GripVertical, File, Video, Type } from 'lucide-react';
+import { Pencil, Trash, Plus, MoreVertical, GripVertical, File, Video, Type, HelpCircle, Edit } from 'lucide-react';
 import LessonForm from './lesson-form';
 import { reorderLesson, deleteLesson } from '@/lib/actions/lesson';
 import { Badge } from '@/components/ui/badge';
+import { useRouter } from 'next/navigation';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -18,10 +19,12 @@ interface Lesson {
     title: string;
     type: string;
     hidden: boolean;
+    isPreview?: boolean;
     order: number;
     contentUrl?: string | null;
     description?: string | null;
     attachments?: any;
+    quizId?: string; // Add quizId to interface
 }
 
 interface LessonListProps {
@@ -33,6 +36,7 @@ export default function LessonList({ courseId, lessons }: LessonListProps) {
     const [isCreating, setIsCreating] = useState(false);
     const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
     const [isPending, startTransition] = useTransition();
+    const router = useRouter();
 
     const onReorder = (id: string, direction: 'up' | 'down') => {
         startTransition(() => {
@@ -52,6 +56,7 @@ export default function LessonList({ courseId, lessons }: LessonListProps) {
         switch (type) {
             case 'VIDEO': return <Video className="h-4 w-4 text-blue-500" />;
             case 'TEXT': return <Type className="h-4 w-4 text-orange-500" />;
+            case 'QUIZ': return <HelpCircle className="h-4 w-4 text-purple-500" />;
             default: return <File className="h-4 w-4 text-gray-500" />;
         }
     };
@@ -69,8 +74,34 @@ export default function LessonList({ courseId, lessons }: LessonListProps) {
 
             <div className="space-y-2">
                 {lessons.length === 0 && !isCreating && (
-                    <div className="text-center p-8 border border-dashed rounded-lg text-muted-foreground">
-                        No lessons yet. Click "Add Module" to start.
+                    <div className="border border-dashed rounded-lg p-8 bg-gradient-to-br from-blue-50 to-indigo-50">
+                        <div className="max-w-md mx-auto text-center space-y-4">
+                            <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
+                                <Video className="h-8 w-8 text-blue-600" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900">Start with an Introduction</h3>
+                            <p className="text-sm text-gray-600">
+                                Create an intro video that non-enrolled students can preview. This helps them understand what they'll learn!
+                            </p>
+                            <div className="flex gap-2 justify-center">
+                                <Button
+                                    onClick={() => setIsCreating(true)}
+                                    size="lg"
+                                    className="bg-blue-600 hover:bg-blue-700"
+                                >
+                                    <Video className="mr-2 h-5 w-5" />
+                                    Create Introduction Lesson
+                                </Button>
+                                <Button
+                                    onClick={() => setIsCreating(true)}
+                                    size="lg"
+                                    variant="outline"
+                                >
+                                    <Plus className="mr-2 h-5 w-5" />
+                                    Add Regular Lesson
+                                </Button>
+                            </div>
+                        </div>
                     </div>
                 )}
 
@@ -98,6 +129,12 @@ export default function LessonList({ courseId, lessons }: LessonListProps) {
                                     {getIcon(lesson.type)}
                                     <span className="font-medium">{lesson.title}</span>
                                     {lesson.hidden && <Badge variant="secondary" className="text-xs">Draft</Badge>}
+                                    {lesson.isPreview && (
+                                        <Badge className="text-xs bg-blue-600">
+                                            <Video className="mr-1 h-3 w-3" />
+                                            Preview
+                                        </Badge>
+                                    )}
                                 </div>
 
                                 {/* Actions */}
@@ -142,6 +179,18 @@ export default function LessonList({ courseId, lessons }: LessonListProps) {
                                             <DropdownMenuItem onClick={() => setEditingLessonId(lesson.id)}>
                                                 <Pencil className="mr-2 h-4 w-4" /> Edit Content
                                             </DropdownMenuItem>
+                                            {lesson.type === 'QUIZ' && (
+                                                <DropdownMenuItem onClick={() => {
+                                                    if (lesson.quizId) {
+                                                        router.push(`/instructor/courses/${courseId}/quiz/${lesson.quizId}`);
+                                                    } else {
+                                                        // Fallback: try to find quiz by lesson content
+                                                        router.push(`/instructor/courses/${courseId}/quiz/${lesson.id}`);
+                                                    }
+                                                }}>
+                                                    <Edit className="mr-2 h-4 w-4" /> Configure Quiz
+                                                </DropdownMenuItem>
+                                            )}
                                             <DropdownMenuItem className="text-destructive" onClick={() => onDelete(lesson.id)}>
                                                 <Trash className="mr-2 h-4 w-4" /> Delete
                                             </DropdownMenuItem>

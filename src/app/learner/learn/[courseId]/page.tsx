@@ -13,9 +13,9 @@ interface CourseLearnPageProps {
     };
 }
 
-export default async function CourseLearnPage({ params }: CourseLearnPageProps) {
+export default async function CourseLearnPage({ params }: { params: Promise<{ courseId: string }> }) {
     const session = await auth();
-    const { courseId } = params;
+    const { courseId } = await params;
 
     if (!session?.user?.id) {
         return redirect('/login');
@@ -166,7 +166,18 @@ export default async function CourseLearnPage({ params }: CourseLearnPageProps) 
 
                     {/* Main Content */}
                     <div className="lg:col-span-2">
-                        {isCompleted ? (
+                        {lessons.length === 0 ? (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>No Lessons Available</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-muted-foreground">
+                                        This course doesn't have any lessons yet. The instructor is still working on the content. Check back soon!
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        ) : isCompleted ? (
                             <CourseCompletion
                                 courseId={courseId}
                                 courseName={enrollment.course.title}

@@ -11,9 +11,9 @@ interface EditCoursePageProps {
     };
 }
 
-export default async function EditCoursePage({ params }: EditCoursePageProps) {
+export default async function EditCoursePage({ params }: { params: Promise<{ courseId: string }> }) {
     const session = await auth();
-    const { courseId } = params;
+    const { courseId } = await params;
 
     if (!session?.user?.id) {
         return redirect('/login');

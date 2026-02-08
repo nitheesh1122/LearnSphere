@@ -5,14 +5,13 @@ export const LoginFormSchema = z.object({
     password: z.string().min(1, { message: 'Password field must not be empty.' }),
 });
 
-const roles: [string, ...string[]] = ['INSTRUCTOR', 'LEARNER'];
+const roles = ['INSTRUCTOR', 'LEARNER'] as const;
 
 export const RegisterFormSchema = z.object({
     name: z.string().min(2, { message: 'Name must be at least 2 characters.' }),
     email: z.string().email({ message: 'Please enter a valid email.' }),
     password: z.string().min(6, { message: 'Password must be at least 6 characters.' }),
-    // @ts-ignore
-    role: z.enum(roles, { invalid_type_error: 'Please select a role.' }),
+    role: z.enum(roles, { message: 'Please select a role.' }),
 });
 
 export const CourseFormSchema = z.object({
@@ -26,7 +25,16 @@ export const CourseFormSchema = z.object({
     level: z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED']),
     visibility: z.enum(['EVERYONE', 'SIGNED_IN']),
     responsibleId: z.string().optional(),
-    // image: z.string().optional(), // Future
+    imageUrl: z.string().refine((val) => {
+        if (!val || val === '') return true;
+        // Accept both full URLs and relative paths starting with /
+        return /^https?:\/\/.+/.test(val) || /^\/uploads\/.+/.test(val);
+    }, { message: 'Invalid URL or upload path' }).optional(),
+    previewVideoUrl: z.string().refine((val) => {
+        if (!val || val === '') return true;
+        // Accept both full URLs and relative paths starting with /
+        return /^https?:\/\/.+/.test(val) || /^\/uploads\/.+/.test(val);
+    }, { message: 'Invalid URL or upload path' }).optional(),
 });
 
 export const LessonFormSchema = z.object({
@@ -36,5 +44,6 @@ export const LessonFormSchema = z.object({
     contentUrl: z.string().optional(),
     description: z.string().optional(),
     attachments: z.string().optional(), // JSON string for now
+    isPreview: z.boolean().optional(),
 });
 

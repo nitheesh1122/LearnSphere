@@ -4,13 +4,30 @@ import { CheckCircle, XCircle } from 'lucide-react';
 import Link from 'next/link';
 
 interface CertificateVerifyPageProps {
-    params: {
+    params: Promise<{
         certificateId: string;
-    };
+    }>;
 }
 
 export default async function CertificateVerifyPage({ params }: CertificateVerifyPageProps) {
-    const { certificateId } = params;
+    const { certificateId } = await params;
+    
+    // Validate certificateId parameter
+    if (!certificateId || typeof certificateId !== 'string') {
+        return (
+            <div className="min-h-screen bg-gray-50 py-12">
+                <div className="container mx-auto px-4 max-w-2xl">
+                    <div className="text-center mb-8">
+                        <h1 className="text-3xl font-bold mb-2">Certificate Verification</h1>
+                        <p className="text-muted-foreground">
+                            Invalid certificate ID provided
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+    
     const result = await verifyCertificate(certificateId);
 
     return (

@@ -1,21 +1,25 @@
 import prisma from '@/lib/prisma';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import ContentViewer from '@/components/learner/content-viewer';
 import LessonSidebar from '@/components/learner/lesson-sidebar';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 interface LessonViewPageProps {
-    params: {
+    params: Promise<{
         lessonId: string;
-    };
+    }>;
 }
 
 export default async function LessonViewPage({ params }: LessonViewPageProps) {
     const session = await auth();
-    const { lessonId } = params;
+    const { lessonId } = await params;
 
-    if (!session?.user?.id) {
-        return redirect('/login');
+    // Validate lessonId parameter
+    if (!lessonId || typeof lessonId !== 'string') {
+        return redirect('/learner/dashboard');
     }
 
     // Fetch lesson with course
@@ -46,6 +50,47 @@ export default async function LessonViewPage({ params }: LessonViewPageProps) {
 
     if (!lesson) {
         return redirect('/learner/dashboard');
+    }
+
+    // Allow access to preview lessons without enrollment
+    if (lesson.isPreview) {
+        return (
+            <div className="min-h-screen bg-gray-50">
+                <div className="container mx-auto py-8 px-4">
+                    <div className="mb-6">
+                        <Link href={`/courses/${lesson.courseId}`} className="inline-flex items-center text-blue-600 hover:text-blue-800">
+                            ← Back to Course
+                        </Link>
+                    </div>
+                    <div className="text-center mb-6">
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-800 mb-4">
+                            Preview Lesson
+                        </Badge>
+                        <h1 className="text-2xl font-bold mb-2">{lesson.title}</h1>
+                        <p className="text-muted-foreground">
+                            This is a preview lesson. Enroll in the course to access all content.
+                        </p>
+                    </div>
+                    <ContentViewer
+                        lesson={lesson}
+                        isCompleted={false}
+                        allLessons={[lesson]}
+                    />
+                    <div className="mt-8 text-center">
+                        <Link href={`/courses/${lesson.courseId}`}>
+                            <Button size="lg">
+                                Enroll in Course to Continue Learning
+                            </Button>
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // For non-preview lessons, require authentication and enrollment
+    if (!session?.user?.id) {
+        return redirect('/login');
     }
 
     // Check enrollment

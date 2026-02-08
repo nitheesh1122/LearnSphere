@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useEffect, useTransition, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, ChevronRight, FileText, Image as ImageIcon, Video, Download } from 'lucide-react';
-import { markLessonComplete } from '@/lib/actions/progress';
+import { CheckCircle, ChevronRight, FileText, Image as ImageIcon, Video, Download, Play, Pause } from 'lucide-react';
+import { trackLessonAccess, markLessonComplete } from '@/lib/actions/progress';
 import { useRouter } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 
@@ -19,18 +19,66 @@ export default function ContentViewer({ lesson, isCompleted, allLessons }: Conte
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
     const [completed, setCompleted] = useState(isCompleted);
+    const [watchTime, setWatchTime] = useState(0);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [readingProgress, setReadingProgress] = useState(0);
+    const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const contentRef = useRef<HTMLDivElement>(null);
+    const completionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const currentIndex = allLessons.findIndex(l => l.id === lesson.id);
     const nextLesson = allLessons[currentIndex + 1];
     const canGoNext = nextLesson && !nextLesson.isLocked;
 
-    const handleMarkComplete = () => {
+    // Track lesson access on mount
+    useEffect(() => {
         startTransition(() => {
-            markLessonComplete(lesson.id).then(() => {
-                setCompleted(true);
-                router.refresh();
-            });
+            trackLessonAccess(lesson.id);
         });
+    }, [lesson.id]);
+
+    // Auto-complete based on content type
+    const checkForAutoCompletion = () => {
+        if (completed) return;
+
+        if (lesson.type === 'VIDEO') {
+            // Multiple criteria for video completion
+            const hasWatchedEnough = watchTime > 30; // Watched at least 30 seconds
+            const hasWatchedSignificant = videoRef.current && 
+                (videoRef.current.duration > 0 && watchTime >= Math.min(30, videoRef.current.duration * 0.8)); // 80% or 30 seconds
+            const hasEnded = videoRef.current?.ended;
+            
+            if (hasWatchedEnough || hasWatchedSignificant || hasEnded) {
+                handleAutoComplete();
+            }
+        } else if (lesson.type === 'TEXT' && readingProgress > 0.8) { // Read 80% of content
+            handleAutoComplete();
+        } else if (lesson.type === 'IMAGE' || lesson.type === 'DOCUMENT') {
+            // For images and documents, mark as complete after 10 seconds
+            if (!completionTimeoutRef.current) {
+                completionTimeoutRef.current = setTimeout(() => handleAutoComplete(), 10000);
+            }
+        }
+    };
+
+    const handleAutoComplete = () => {
+        if (!completed) {
+            startTransition(() => {
+                markLessonComplete(lesson.id).then((result) => {
+                    if (result.success) {
+                        setCompleted(true);
+                        setShowSuccessMessage(true);
+                        // Show success message briefly before refreshing
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    } else {
+                        console.error('Failed to mark lesson complete:', result.error);
+                    }
+                });
+            });
+        }
     };
 
     const handleNext = () => {
@@ -39,18 +87,85 @@ export default function ContentViewer({ lesson, isCompleted, allLessons }: Conte
         }
     };
 
+    // Video tracking
+    const handleVideoPlay = () => {
+        setIsPlaying(true);
+        checkForAutoCompletion();
+    };
+
+    const handleVideoPause = () => {
+        setIsPlaying(false);
+        checkForAutoCompletion();
+    };
+
+    const handleVideoTimeUpdate = () => {
+        if (videoRef.current) {
+            setWatchTime(videoRef.current.currentTime);
+            checkForAutoCompletion();
+        }
+    };
+
+    const handleVideoEnded = () => {
+        // Video ended - mark as complete immediately
+        if (!completed) {
+            handleAutoComplete();
+        }
+    };
+
+    // Reading progress tracking
+    const handleScroll = () => {
+        if (contentRef.current && lesson.type === 'TEXT') {
+            const { scrollTop, scrollHeight, clientHeight } = contentRef.current;
+            const progress = scrollTop / (scrollHeight - clientHeight);
+            setReadingProgress(progress);
+            checkForAutoCompletion();
+        }
+    };
+
+    useEffect(() => {
+        if (lesson.type === 'TEXT') {
+            const element = contentRef.current;
+            if (element) {
+                element.addEventListener('scroll', handleScroll);
+                return () => element.removeEventListener('scroll', handleScroll);
+            }
+        }
+    }, [lesson.type]);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (completionTimeoutRef.current) {
+                clearTimeout(completionTimeoutRef.current);
+            }
+        };
+    }, []);
+
     const renderContent = () => {
         switch (lesson.type) {
             case 'VIDEO':
                 return (
-                    <div className="aspect-video bg-black rounded-lg overflow-hidden">
+                    <div className="aspect-video bg-black rounded-lg overflow-hidden relative">
                         {lesson.contentUrl ? (
-                            <iframe
-                                src={lesson.contentUrl}
-                                className="w-full h-full"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                allowFullScreen
-                            />
+                            <>
+                                <video
+                                    ref={videoRef}
+                                    src={lesson.contentUrl}
+                                    className="w-full h-full"
+                                    controls
+                                    onPlay={handleVideoPlay}
+                                    onPause={handleVideoPause}
+                                    onTimeUpdate={handleVideoTimeUpdate}
+                                    onEnded={handleVideoEnded}
+                                    onLoadedMetadata={checkForAutoCompletion}
+                                />
+                                {completed && (
+                                    <div className="absolute top-4 right-4 bg-green-600 text-white px-3 py-1 rounded-full text-sm">
+                                        <CheckCircle className="inline mr-1 h-4 w-4" />
+                                        Completed
+                                    </div>
+                                )}
+                            </>
                         ) : (
                             <div className="flex items-center justify-center h-full text-white">
                                 <div className="text-center">
@@ -64,9 +179,21 @@ export default function ContentViewer({ lesson, isCompleted, allLessons }: Conte
 
             case 'TEXT':
                 return (
-                    <div className="prose max-w-none">
+                    <div 
+                        ref={contentRef}
+                        className="prose max-w-none max-h-[600px] overflow-y-auto p-4 bg-white rounded-lg"
+                        onScroll={handleScroll}
+                    >
                         {lesson.contentUrl ? (
-                            <ReactMarkdown>{lesson.contentUrl}</ReactMarkdown>
+                            <>
+                                <ReactMarkdown>{lesson.contentUrl}</ReactMarkdown>
+                                {completed && (
+                                    <div className="sticky bottom-4 right-4 bg-green-600 text-white px-3 py-1 rounded-full text-sm">
+                                        <CheckCircle className="inline mr-1 h-4 w-4" />
+                                        Completed
+                                    </div>
+                                )}
+                            </>
                         ) : (
                             <p className="text-muted-foreground">No content available</p>
                         )}
@@ -77,11 +204,20 @@ export default function ContentViewer({ lesson, isCompleted, allLessons }: Conte
                 return (
                     <div className="flex justify-center">
                         {lesson.contentUrl ? (
-                            <img
-                                src={lesson.contentUrl}
-                                alt={lesson.title}
-                                className="max-w-full h-auto rounded-lg"
-                            />
+                            <div className="relative">
+                                <img
+                                    src={lesson.contentUrl}
+                                    alt={lesson.title}
+                                    className="max-w-full h-auto rounded-lg"
+                                    onLoad={checkForAutoCompletion}
+                                />
+                                {completed && (
+                                    <div className="absolute top-4 right-4 bg-green-600 text-white px-3 py-1 rounded-full text-sm">
+                                        <CheckCircle className="inline mr-1 h-4 w-4" />
+                                        Completed
+                                    </div>
+                                )}
+                            </div>
                         ) : (
                             <div className="text-center text-muted-foreground">
                                 <ImageIcon className="h-12 w-12 mx-auto mb-4" />
@@ -99,7 +235,15 @@ export default function ContentViewer({ lesson, isCompleted, allLessons }: Conte
                                 <embed
                                     src={lesson.contentUrl}
                                     type="application/pdf"
-                                    className="w-full h-[600px] rounded-lg border" />
+                                    className="w-full h-[600px] rounded-lg border"
+                                    onLoad={checkForAutoCompletion}
+                                />
+                                {completed && (
+                                    <div className="bg-green-600 text-white px-3 py-1 rounded-full text-sm inline-block">
+                                        <CheckCircle className="inline mr-1 h-4 w-4" />
+                                        Completed
+                                    </div>
+                                )}
                                 <a
                                     href={lesson.contentUrl}
                                     download
@@ -182,21 +326,18 @@ export default function ContentViewer({ lesson, isCompleted, allLessons }: Conte
 
                 {/* Actions */}
                 <div className="flex gap-3 pt-4 border-t">
-                    {!completed && (
-                        <Button
-                            onClick={handleMarkComplete}
-                            disabled={isPending}
-                            variant="default"
-                        >
-                            <CheckCircle className="mr-2 h-4 w-4" />
-                            Mark as Complete
-                        </Button>
+                    {showSuccessMessage && (
+                        <div className="flex items-center gap-2 text-green-600 font-medium animate-pulse">
+                            <CheckCircle className="h-5 w-5" />
+                            Lesson completed! Next lesson unlocked.
+                        </div>
                     )}
-
+                    
                     {canGoNext && (
                         <Button
                             onClick={handleNext}
-                            variant="outline"
+                            variant="default"
+                            className="ml-auto"
                         >
                             Next Lesson
                             <ChevronRight className="ml-2 h-4 w-4" />
@@ -204,9 +345,15 @@ export default function ContentViewer({ lesson, isCompleted, allLessons }: Conte
                     )}
 
                     {!canGoNext && nextLesson && (
-                        <Button variant="outline" disabled>
+                        <Button variant="outline" disabled className="ml-auto">
                             Complete this lesson to unlock next
                         </Button>
+                    )}
+
+                    {!nextLesson && completed && (
+                        <div className="ml-auto text-green-600 font-medium">
+                            🎉 Course Completed! Great job!
+                        </div>
                     )}
                 </div>
             </CardContent>

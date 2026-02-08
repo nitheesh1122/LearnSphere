@@ -77,6 +77,8 @@ model Course {
   deletedAt    DateTime?
   price        Float?
   accessType   String   @default("OPEN") // OPEN, INVITE, PAID
+  imageUrl     String?
+  previewVideoUrl String?
   
   // Phase 4: Instructor Advanced
   tags         String[]
@@ -105,6 +107,7 @@ model CourseContent {
   
   // Content Logic
   contentUrl String? // video url, markdown source, etc.
+  isPreview  Boolean  @default(false) // Mark as course preview video
   
   // Phase 4: Attachments
   attachments Json? // Array of { name, url, type }

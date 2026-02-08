@@ -19,7 +19,7 @@ export async function createCourse(data: z.infer<typeof CourseFormSchema>) {
         return { error: 'Invalid fields' };
     }
 
-    const { title, description, price, published, accessType, tags, website, level, visibility, responsibleId } = validatedFields.data;
+    const { title, description, price, published, accessType, tags, website, level, visibility, responsibleId, imageUrl, previewVideoUrl } = validatedFields.data;
 
     // Parse tags from comma-separated string if needed, or assume frontend sends array?
     // Zod definition says string, so we need to split it if we want array in DB.
@@ -41,11 +41,13 @@ export async function createCourse(data: z.infer<typeof CourseFormSchema>) {
                 level,
                 visibility,
                 responsibleId: responsibleId || null,
+                imageUrl,
+                previewVideoUrl,
             },
         });
     } catch (error) {
-        console.error('Failed to create course:', error);
-        return { error: 'Failed to create course.' };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return { error: `Course creation failed: ${errorMessage}` };
     }
 
     revalidatePath('/instructor/courses');
@@ -122,7 +124,8 @@ export async function getInstructorCourses() {
         });
         return courses;
     } catch (error) {
-        console.error('Failed to fetch courses:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Failed to fetch courses:', errorMessage);
         return [];
     }
 }

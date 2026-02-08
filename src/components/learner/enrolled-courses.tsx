@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { BookOpen, CheckCircle, Clock } from 'lucide-react';
+import { BookOpen, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
 interface Enrollment {
@@ -29,6 +29,9 @@ interface EnrolledCoursesProps {
 }
 
 export default function EnrolledCourses({ enrollments }: EnrolledCoursesProps) {
+    console.log('🎓 EnrolledCourses Component: Received enrollments:', enrollments.length);
+    console.log('📚 EnrolledCourses Component: Data:', enrollments);
+
     if (enrollments.length === 0) {
         return (
             <Card>
@@ -73,9 +76,21 @@ export default function EnrolledCourses({ enrollments }: EnrolledCoursesProps) {
 
     return (
         <div className="space-y-4">
-            <h2 className="text-xl font-semibold">My Courses</h2>
+            <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold">My Courses</h2>
+                <div className="text-sm text-muted-foreground">
+                    {enrollments.length} course{enrollments.length !== 1 ? 's' : ''} enrolled
+                </div>
+            </div>
 
-            {enrollments.map((enrollment) => (
+            {/* Debug Info */}
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                    <strong>Debug:</strong> Rendering {enrollments.length} enrolled courses
+                </p>
+            </div>
+
+            {enrollments.map((enrollment, index) => (
                 <Card key={enrollment.id} className="hover:shadow-md transition-shadow">
                     <CardHeader>
                         <div className="flex justify-between items-start">
@@ -84,11 +99,22 @@ export default function EnrolledCourses({ enrollments }: EnrolledCoursesProps) {
                                 <CardDescription>
                                     By {enrollment.course.instructor.name || 'Unknown Instructor'}
                                 </CardDescription>
+                                <div className="mt-2">
+                                    <Badge variant="outline" className="text-xs">
+                                        Course #{index + 1}
+                                    </Badge>
+                                </div>
                             </div>
                             {getStatusBadge(enrollment)}
                         </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
+                        {enrollment.course.description && (
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                                {enrollment.course.description}
+                            </p>
+                        )}
+                        
                         <div>
                             <div className="flex justify-between items-center mb-2">
                                 <span className="text-sm text-muted-foreground">
@@ -98,7 +124,7 @@ export default function EnrolledCourses({ enrollments }: EnrolledCoursesProps) {
                                     {enrollment.progressPercentage}%
                                 </span>
                             </div>
-                            <Progress value={enrollment.progressPercentage} />
+                            <Progress value={enrollment.progressPercentage} className="h-2" />
                         </div>
 
                         <div className="flex gap-2">
@@ -107,6 +133,10 @@ export default function EnrolledCourses({ enrollments }: EnrolledCoursesProps) {
                                     {enrollment.progressPercentage === 0 ? 'Start Course' : 'Continue Learning'}
                                 </Button>
                             </Link>
+                        </div>
+
+                        <div className="text-xs text-muted-foreground">
+                            Enrolled on: {enrollment.enrolledAt.toLocaleDateString()}
                         </div>
                     </CardContent>
                 </Card>

@@ -10,12 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { register } from '@/lib/actions';
 import { useState, useTransition } from 'react';
 import { z } from 'zod';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function RegisterForm() {
     const [error, setError] = useState<string | undefined>('');
     const [success, setSuccess] = useState<string | undefined>('');
     const [isPending, startTransition] = useTransition();
+    const router = useRouter();
 
     const form = useForm<z.infer<typeof RegisterFormSchema>>({
         resolver: zodResolver(RegisterFormSchema),
@@ -36,6 +37,7 @@ export default function RegisterForm() {
                 if (data?.error) {
                     setError(data.error);
                 } else {
+                    // success handled by redirect in action
                     setSuccess('Registration successful! Redirecting...');
                 }
             });
@@ -44,20 +46,15 @@ export default function RegisterForm() {
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
                     control={form.control}
                     name="name"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-sm font-medium">Full Name</FormLabel>
+                            <FormLabel>Name</FormLabel>
                             <FormControl>
-                                <Input
-                                    placeholder="John Doe"
-                                    {...field}
-                                    disabled={isPending}
-                                    className="h-11 shadow-sm"
-                                />
+                                <Input placeholder="John Doe" {...field} disabled={isPending} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -68,15 +65,9 @@ export default function RegisterForm() {
                     name="email"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-sm font-medium">Email Address</FormLabel>
+                            <FormLabel>Email</FormLabel>
                             <FormControl>
-                                <Input
-                                    placeholder="name@example.com"
-                                    type="email"
-                                    {...field}
-                                    disabled={isPending}
-                                    className="h-11 shadow-sm"
-                                />
+                                <Input placeholder="m@example.com" type="email" {...field} disabled={isPending} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -87,15 +78,9 @@ export default function RegisterForm() {
                     name="password"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-sm font-medium">Password</FormLabel>
+                            <FormLabel>Password</FormLabel>
                             <FormControl>
-                                <Input
-                                    type="password"
-                                    placeholder="••••••••"
-                                    {...field}
-                                    disabled={isPending}
-                                    className="h-11 shadow-sm"
-                                />
+                                <Input type="password" placeholder="******" {...field} disabled={isPending} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -106,11 +91,11 @@ export default function RegisterForm() {
                     name="role"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="text-sm font-medium">I am a...</FormLabel>
+                            <FormLabel>Role</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isPending}>
                                 <FormControl>
-                                    <SelectTrigger className="h-11 shadow-sm">
-                                        <SelectValue placeholder="Select your role" />
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a role" />
                                     </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
@@ -122,26 +107,20 @@ export default function RegisterForm() {
                         </FormItem>
                     )}
                 />
-
                 {error && (
-                    <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 animate-fade-in">
-                        <AlertCircle className="h-4 w-4 text-destructive" />
-                        <p className="text-sm text-destructive font-medium">{error}</p>
+                    <div className="bg-destructive/15 p-3 rounded-md flex items-center gap-x-2 text-sm text-destructive">
+                        <p>{error}</p>
                     </div>
                 )}
-
                 {success && (
-                    <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 border border-emerald-200 animate-fade-in">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                        <p className="text-sm text-emerald-700 font-medium">{success}</p>
+                    <div className="bg-emerald-500/15 p-3 rounded-md flex items-center gap-x-2 text-sm text-emerald-500">
+                        <p>{success}</p>
                     </div>
                 )}
-
-                <Button type="submit" className="w-full h-11 font-medium mt-2" disabled={isPending}>
-                    {isPending ? 'Creating Account...' : 'Create Account'}
+                <Button type="submit" className="w-full" disabled={isPending}>
+                    {isPending ? 'Registering...' : 'Create Account'}
                 </Button>
             </form>
         </Form>
     );
 }
-

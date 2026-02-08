@@ -146,8 +146,8 @@ export async function generateCertificate(courseId: string) {
             },
         };
     } catch (error) {
-        console.error(error);
-        return { error: 'Failed to generate certificate' };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return { error: `Certificate generation failed: ${errorMessage}` };
     }
 }
 

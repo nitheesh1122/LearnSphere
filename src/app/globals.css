@@ -3,10 +3,9 @@
 @import "shadcn/tailwind.css";
 
 /* 
-  LearnSphere Brand Design System
-  - Role-based color theming
-  - Consistent typography and spacing
-  - Subtle brand animations
+  Custom Theme Configuration
+  - Strict SaaS colors
+  - No fancy gradients
 */
 
 @theme inline {
@@ -14,8 +13,11 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-
-  /* shadcn/ui variable mappings */
+  /* ... keep shadcn variables mappings if needed, 
+     but standard shadcn install usually puts them in global css or tailwind config. 
+     The previous file showed they were mapped here. 
+     I will preserve the shadcn mapping to avoid breaking UI components.
+  */
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -56,8 +58,6 @@
 
 :root {
   --radius: 0.5rem;
-
-  /* Base theme colors */
   --background: oklch(1 0 0);
   --foreground: oklch(0.129 0.042 264.695);
   --card: oklch(1 0 0);
@@ -73,7 +73,7 @@
   --accent: oklch(0.967 0.001 286.375);
   --accent-foreground: oklch(0.208 0.042 265.755);
   --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
+  --destructive-foreground: oklch(0.577 0.245 27.325); /* Fixed foreground color usually white but let's stick to simple */ 
   --border: oklch(0.92 0.004 286.32);
   --input: oklch(0.92 0.004 286.32);
   --ring: oklch(0.705 0.015 286.067);
@@ -90,48 +90,6 @@
   --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
   --sidebar-border: oklch(0.92 0.004 286.32);
   --sidebar-ring: oklch(0.705 0.015 286.067);
-
-  /* Role-based theming variables (default - can be overridden) */
-  --role-primary: 238 242 255;
-  --role-accent: 79 70 229;
-  --role-accent-dark: 67 56 202;
-  --role-surface: 248 250 252;
-}
-
-/* Admin Role Theme (Indigo/Slate) */
-[data-role="admin"] {
-  --role-primary: 238 242 255;
-  /* indigo-50 */
-  --role-accent: 79 70 229;
-  /* indigo-600 */
-  --role-accent-dark: 67 56 202;
-  /* indigo-700 */
-  --role-surface: 248 250 252;
-  /* slate-50 */
-}
-
-/* Instructor Role Theme (Emerald/Teal) */
-[data-role="instructor"] {
-  --role-primary: 236 253 245;
-  /* emerald-50 */
-  --role-accent: 16 185 129;
-  /* emerald-500 */
-  --role-accent-dark: 5 150 105;
-  /* emerald-600 */
-  --role-surface: 240 253 250;
-  /* teal-50 */
-}
-
-/* Learner Role Theme (Blue/Violet) */
-[data-role="learner"] {
-  --role-primary: 239 246 255;
-  /* blue-50 */
-  --role-accent: 59 130 246;
-  /* blue-500 */
-  --role-accent-dark: 37 99 235;
-  /* blue-600 */
-  --role-surface: 245 243 255;
-  /* violet-50 */
 }
 
 .dark {
@@ -173,116 +131,7 @@
   * {
     @apply border-border outline-ring/50;
   }
-
   body {
-    @apply bg-background text-foreground antialiased;
-    font-feature-settings: "rlig" 1, "calt" 1;
-  }
-
-  /* Typography Scale */
-  h1 {
-    @apply text-3xl md:text-4xl font-bold tracking-tight;
-  }
-
-  h2 {
-    @apply text-2xl md:text-3xl font-semibold tracking-tight;
-  }
-
-  h3 {
-    @apply text-xl font-semibold;
-  }
-
-  h4 {
-    @apply text-lg font-semibold;
-  }
-
-  /* Improved card styling */
-  .card-elevated {
-    @apply bg-card border border-border/50 rounded-lg shadow-sm hover:shadow-md transition-shadow;
-  }
-
-  /* Role-based accent utilities */
-  .role-accent-bg {
-    background-color: rgb(var(--role-accent) / 0.1);
-  }
-
-  .role-accent-text {
-    color: rgb(var(--role-accent));
-  }
-
-  .role-accent-border {
-    border-color: rgb(var(--role-accent) / 0.3);
-  }
-
-  .role-surface-bg {
-    background-color: rgb(var(--role-surface));
-  }
-}
-
-/* Brand Animations */
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-.animate-fade-in-up {
-  animation: fadeInUp 0.5s ease-out;
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-out;
-}
-
-/* Stagger children animations */
-.stagger-children>* {
-  opacity: 0;
-  animation: fadeInUp 0.5s ease-out forwards;
-}
-
-.stagger-children>*:nth-child(1) {
-  animation-delay: 0.05s;
-}
-
-.stagger-children>*:nth-child(2) {
-  animation-delay: 0.1s;
-}
-
-.stagger-children>*:nth-child(3) {
-  animation-delay: 0.15s;
-}
-
-.stagger-children>*:nth-child(4) {
-  animation-delay: 0.2s;
-}
-
-.stagger-children>*:nth-child(5) {
-  animation-delay: 0.25s;
-}
-
-.stagger-children>*:nth-child(6) {
-  animation-delay: 0.3s;
-}
-
-/* Improved focus states */
-@layer utilities {
-  .focus-visible-ring {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    @apply bg-background text-foreground;
   }
 }

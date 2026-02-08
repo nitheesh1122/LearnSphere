@@ -47,8 +47,9 @@ export default function CourseDetailView({ course, isAuthenticated }: CourseDeta
                     if (result.error) {
                         setError(result.error);
                     } else {
+                        // Success - redirect to learning page
+                        console.log('Enrollment successful, redirecting to learn page');
                         router.push(`/learner/learn/${course.id}`);
-                        router.refresh();
                     }
                 });
             });
@@ -95,6 +96,20 @@ export default function CourseDetailView({ course, isAuthenticated }: CourseDeta
             {/* Course Header */}
             <Card>
                 <CardHeader>
+                    {(course.previewVideoUrl || course.imageUrl) && (
+                        <div className="mb-6 rounded-lg overflow-hidden aspect-video bg-muted relative">
+                            {course.previewVideoUrl ? (
+                                <iframe
+                                    src={course.previewVideoUrl.replace('watch?v=', 'embed/')}
+                                    className="w-full h-full object-cover"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                />
+                            ) : (
+                                <img src={course.imageUrl} alt={course.title} className="w-full h-full object-cover" />
+                            )}
+                        </div>
+                    )}
                     <div className="flex justify-between items-start mb-4">
                         <div className="space-y-2">
                             <div className="flex items-center gap-2">

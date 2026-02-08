@@ -10,9 +10,9 @@ interface CourseDetailPageProps {
     };
 }
 
-export default async function CourseDetailPage({ params }: CourseDetailPageProps) {
+export default async function CourseDetailPage({ params }: { params: Promise<{ courseId: string }> }) {
     const session = await auth();
-    const { courseId } = params;
+    const { courseId } = await params;
 
     // Fetch course with details
     const course = await prisma.course.findUnique({

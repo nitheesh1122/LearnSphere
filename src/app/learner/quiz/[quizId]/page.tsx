@@ -5,17 +5,22 @@ import QuizPlayer from '@/components/learner/quiz-player';
 import { getQuizAttempts } from '@/lib/actions/quiz';
 
 interface QuizPageProps {
-    params: {
+    params: Promise<{
         quizId: string;
-    };
+    }>;
 }
 
 export default async function QuizPage({ params }: QuizPageProps) {
     const session = await auth();
-    const { quizId } = params;
+    const { quizId } = await params;
 
     if (!session?.user?.id) {
         return redirect('/login');
+    }
+
+    // Validate quizId parameter
+    if (!quizId || typeof quizId !== 'string') {
+        return redirect('/learner/dashboard');
     }
 
     // Fetch quiz with questions

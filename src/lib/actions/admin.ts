@@ -39,7 +39,8 @@ export async function getAdminStats() {
             totalEnrollments
         };
     } catch (error) {
-        console.error('Failed to fetch admin stats:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Admin stats fetch failed:', errorMessage);
         return {
             totalUsers: 0,
             totalInstructors: 0,

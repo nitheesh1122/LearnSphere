@@ -94,8 +94,8 @@ export async function register(values: z.infer<typeof RegisterFormSchema>) {
 
         // success
     } catch (error) {
-        console.error('Registration error:', error);
-        return { error: 'Failed to create user.' };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return { error: `Registration failed: ${errorMessage}` };
     }
 
     redirect('/login');

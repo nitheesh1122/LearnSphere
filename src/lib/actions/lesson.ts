@@ -27,7 +27,15 @@ export async function createLesson(courseId: string, data: z.infer<typeof Lesson
         return { error: 'Invalid fields' };
     }
 
-    const { title, type, hidden, contentUrl, description, attachments } = validatedFields.data;
+    const { title, type, hidden, contentUrl, description, attachments, isPreview } = validatedFields.data;
+
+    // If this lesson is marked as preview, unmark all other lessons
+    if (isPreview) {
+        await prisma.courseContent.updateMany({
+            where: { courseId, isPreview: true },
+            data: { isPreview: false },
+        });
+    }
 
     // Get max order
     const lastLesson = await prisma.courseContent.findFirst({
@@ -38,7 +46,7 @@ export async function createLesson(courseId: string, data: z.infer<typeof Lesson
     const newOrder = (lastLesson?.order ?? 0) + 1;
 
     try {
-        await prisma.courseContent.create({
+        const lesson = await prisma.courseContent.create({
             data: {
                 courseId,
                 title,
@@ -46,10 +54,28 @@ export async function createLesson(courseId: string, data: z.infer<typeof Lesson
                 hidden,
                 order: newOrder,
                 contentUrl,
+                isPreview: isPreview || false,
                 attachments: attachments ? JSON.parse(attachments) : undefined, // Parse JSON string
                 // description is not in CourseContent yet? Wait, let me check schema.
             },
         });
+
+        // If this is a quiz lesson, create a corresponding quiz record
+        if (type === 'QUIZ') {
+            console.log('Creating quiz record for lesson:', lesson.id);
+            try {
+                const quiz = await prisma.quiz.create({
+                    data: {
+                        contentId: lesson.id,
+                        passingScore: 70, // Default passing score
+                    },
+                });
+                console.log('Quiz created successfully:', quiz.id);
+            } catch (quizError) {
+                console.error('Failed to create quiz record:', quizError);
+                return { error: 'Failed to create quiz record' };
+            }
+        }
     } catch (error) {
         return { error: 'Failed to create lesson' };
     }
@@ -86,12 +112,21 @@ export async function updateLesson(courseId: string, lessonId: string, data: z.i
     }
 
     try {
-        const { attachments, ...rest } = validatedFields.data;
+        const { attachments, isPreview, ...rest } = validatedFields.data;
+
+        // If this lesson is marked as preview, unmark all other lessons
+        if (isPreview) {
+            await prisma.courseContent.updateMany({
+                where: { courseId, isPreview: true, NOT: { id: lessonId } },
+                data: { isPreview: false },
+            });
+        }
 
         await prisma.courseContent.update({
             where: { id: lessonId },
             data: {
                 ...rest,
+                isPreview: isPreview || false,
                 attachments: attachments ? JSON.parse(attachments) : undefined
             },
         });
@@ -188,7 +223,8 @@ export async function reorderLesson(courseId: string, lessonId: string, directio
             }),
         ]);
     } catch (error) {
-        console.error('Reorder failed', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('Lesson reorder failed:', errorMessage);
     }
 
     revalidatePath(`/instructor/courses/${courseId}/edit`);

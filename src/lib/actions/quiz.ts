@@ -123,8 +123,86 @@ export async function submitQuizAttempt(attemptId: string, answers: Record<strin
             totalQuestions,
         };
     } catch (error) {
-        console.error(error);
-        return { error: 'Failed to submit quiz' };
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return { error: `Quiz submission failed: ${errorMessage}` };
+    }
+}
+
+export async function saveQuiz(quizId: string, data: { questions: any[], passingScore: number }) {
+    const session = await auth();
+    if (!session?.user?.id || session?.user?.role !== 'INSTRUCTOR') {
+        return { error: 'Unauthorized' };
+    }
+
+    try {
+        // Verify quiz ownership
+        const quiz = await prisma.quiz.findUnique({
+            where: { id: quizId },
+            include: {
+                content: {
+                    include: {
+                        course: true,
+                    },
+                },
+            },
+        });
+
+        if (!quiz || quiz.content.course.instructorId !== session.user.id) {
+            return { error: 'Quiz not found or unauthorized' };
+        }
+
+        // Delete existing questions and answers
+        await prisma.answer.deleteMany({
+            where: {
+                question: {
+                    quizId: quizId,
+                },
+            },
+        });
+
+        await prisma.question.deleteMany({
+            where: { quizId: quizId },
+        });
+
+        // Create new questions and answers
+        for (const question of data.questions) {
+            const createdQuestion = await prisma.question.create({
+                data: {
+                    quizId: quizId,
+                    text: question.text,
+                    type: question.type,
+                    points: question.points,
+                    order: question.order || 0,
+                },
+            });
+
+            // Create answers for this question
+            if (question.answers && question.answers.length > 0) {
+                await prisma.answer.createMany({
+                    data: question.answers.map((answer: any) => ({
+                        questionId: createdQuestion.id,
+                        text: answer.text,
+                        isCorrect: answer.isCorrect || false,
+                    })),
+                });
+            }
+        }
+
+        // Update quiz passing score
+        await prisma.quiz.update({
+            where: { id: quizId },
+            data: {
+                passingScore: data.passingScore,
+            },
+        });
+
+        revalidatePath(`/instructor/courses/${quiz.content.courseId}/quiz/${quizId}`);
+        revalidatePath(`/instructor/courses/${quiz.content.courseId}/edit`);
+
+        return { success: true };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        return { error: `Failed to save quiz: ${errorMessage}` };
     }
 }
 

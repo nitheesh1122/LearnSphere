@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
-    Form,
     FormControl,
     FormDescription,
     FormField,
@@ -17,6 +16,7 @@ import {
     FormLabel,
     FormMessage,
 } from '@/components/ui/form';
+import { FormProvider } from 'react-hook-form';
 import {
     Select,
     SelectContent,
@@ -76,10 +76,18 @@ export default function CourseEditForm({ course, lessons, quizzes = [] }: Course
         });
     };
 
-    return (
-        <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+    // Merge quiz information with lessons
+    const lessonsWithQuizIds = lessons.map(lesson => {
+        const quiz = quizzes.find(q => q.contentId === lesson.id);
+        return {
+            ...lesson,
+            quizId: quiz?.id,
+        };
+    });
 
+    return (
+        <FormProvider {...form}>
+            <div className="space-y-6">
                 {/* Header Actions */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -90,7 +98,7 @@ export default function CourseEditForm({ course, lessons, quizzes = [] }: Course
                     </div>
                     <div className="flex gap-2">
                         {/* Publish Toggle is inside the form as a checkbox, but we can also have a quick action here later */}
-                        <Button type="submit" disabled={isPending}>
+                        <Button type="button" onClick={form.handleSubmit(onSubmit)} disabled={isPending}>
                             {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Save Changes
                         </Button>
@@ -99,16 +107,16 @@ export default function CourseEditForm({ course, lessons, quizzes = [] }: Course
 
                 <Tabs defaultValue="content" className="space-y-4">
                     <TabsList>
-                        <TabsTrigger value="content">Content</TabsTrigger>
+                        <TabsTrigger value="content">Curriculum</TabsTrigger>
                         <TabsTrigger value="description">Description</TabsTrigger>
                         <TabsTrigger value="options">Options & Access</TabsTrigger>
                         <TabsTrigger value="quiz">Quizzes</TabsTrigger>
                     </TabsList>
 
-                    {/* Tab 1: Content (Lessons) */}
+                    {/* Tab 1: Curriculum (Outside form to avoid nesting) */}
                     <TabsContent value="content" className="space-y-4">
                         <div className="border p-6 rounded-md bg-white">
-                            <LessonList courseId={course.id} lessons={lessons} />
+                            <LessonList courseId={course.id} lessons={lessonsWithQuizIds} />
                         </div>
                     </TabsContent>
 
@@ -320,7 +328,7 @@ export default function CourseEditForm({ course, lessons, quizzes = [] }: Course
                 </Tabs>
 
                 {error && <div className="text-destructive text-sm">{error}</div>}
-            </form>
-        </Form>
+            </div>
+        </FormProvider>
     );
 }

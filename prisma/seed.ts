@@ -55,6 +55,63 @@ async function main() {
 
         console.log(`User created: ${u.email} with role ${u.role}`)
     }
+    // 3. Create Courses
+    console.log("Seeding courses...");
+
+    // Get instructor user
+    const instructor = await prisma.user.findUnique({
+        where: { email: 'instructor@learnsphere.com' }
+    });
+
+    if (instructor) {
+        const coursesData = [
+            {
+                title: "Digital Illustration: Learn to Use Procreate",
+                description: "Learn the basics of Procreate on the iPad. This course covers everything from tools to layers, helping you create stunning digital art.",
+                price: 29.99,
+                published: true,
+                tags: ["Creative", "Design", "Art"],
+                level: "BEGINNER",
+                instructorId: instructor.id
+            },
+            {
+                title: "Graphic Design Basics: Core Principles for Visual Design",
+                description: "Master the fundamental principles of graphic design. Learn about typography, color theory, layout, and composition.",
+                price: 49.99,
+                published: true,
+                tags: ["Design", "Business"],
+                level: "BEGINNER",
+                instructorId: instructor.id
+            },
+            {
+                title: "Personal Branding: Crafting Your Social Media Presence",
+                description: "Build a strong personal brand on social media. Learn strategies for content creation, engagement, and growth.",
+                price: 19.99,
+                published: true,
+                tags: ["Marketing", "Business"],
+                level: "INTERMEDIATE",
+                instructorId: instructor.id
+            },
+            {
+                title: "Productivity Masterclass: Create a Custom System that Works",
+                description: "Boost your productivity with a custom system. Learn techniques for time management, goal setting, and focus.",
+                price: 39.99,
+                published: true,
+                tags: ["Productivity", "Lifestyle"],
+                level: "ADVANCED",
+                instructorId: instructor.id
+            }
+        ];
+
+        for (const courseData of coursesData) {
+            await prisma.course.create({
+                data: courseData
+            });
+            console.log(`Course created: ${courseData.title}`);
+        }
+    }
+
+    console.log("Seeding completed.");
 }
 
 main()
